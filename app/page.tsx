@@ -2018,7 +2018,7 @@ function KpiCard({
   value,
   danger = false,
 }: {
-  icon: JSX.Element;
+ icon: React.ReactNode;
   label: string;
   value: number;
   danger?: boolean;
