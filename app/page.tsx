@@ -1,24 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  Bell,
-  Building2,
-  ChevronLeft,
-  ClipboardCheck,
-  Clock3,
-  FileText,
-  LogOut,
-  Paperclip,
-  Shield,
-  Store,
-  Target,
-  Trash2,
-  UserCheck,
-  UserPlus,
   Users,
+  AlertTriangle,
+  ClipboardCheck,
+  Store,
+  ChevronLeft,
+  FileText,
+  Bell,
+  DollarSign,
+  Clock3,
+  LogOut,
+  Shield,
+  UserPlus,
+  Building2,
+  Upload,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  Target,
 } from "lucide-react";
 
 type Role = "owner" | "gm";
@@ -30,99 +33,88 @@ type User = {
   storeId: string | null;
 };
 
-type StoreRow = {
-  id: number;
+type StoreType = {
+  id: string;
   name: string;
 };
 
-type ManagerRow = {
-  id: number;
-  name: string;
-  email?: string | null;
-  role?: string | null;
-  store_id: number | null;
+type CheckinRating = "+" | "+/-" | "-";
+
+type PayEntry = {
+  id: string;
+  title: string;
+  rate: string;
+  date: string;
+  tipsEligible: "Yes" | "No";
+  enteredBy: string;
 };
 
-type EmployeeRow = {
-  id: number;
-  name: string;
-  title: string | null;
-  store_id: number | null;
-  start_date: string | null;
-  next_review_due: string | null;
-  assigned_trainer: string | null;
-  insurance_approved: boolean | null;
-  adp_signed_up: boolean | null;
-  terminated: boolean | null;
-  termination_reason: string | null;
-  termination_date: string | null;
+type ReviewHistoryEntry = {
+  id: string;
+  date: string;
+  manager: string;
+  total: number;
+  type: string;
+  scores: {
+    customerService: number;
+    productQuality: number;
+    foodSafety: number;
+    productivity: number;
+    communication: number;
+    dependability: number;
+    jobKnowledge: number;
+    safety: number;
+  };
 };
 
-type NoteRow = {
-  id: number;
-  employee_id: number;
-  note_date: string;
-  note_text: string;
-  manager_name: string | null;
+type NoteEntry = {
+  date: string;
+  text: string;
+  manager: string;
 };
 
-type GoalRow = {
-  id: number;
-  employee_id: number;
-  goal_date: string;
-  goal_text: string;
-  support_text: string | null;
-  manager_name: string | null;
+type GoalEntry = {
+  id: string;
+  date: string;
+  goal: string;
+  support: string;
+  manager: string;
 };
 
-type CheckinRow = {
-  id: number;
-  employee_id: number;
-  checkin_date: string;
-  manager_name: string | null;
-  team_player: string | null;
-  customer_focus: string | null;
-  quality_focus: string | null;
-  integrity: string | null;
-  reliability: string | null;
-  upbeat_friendly: string | null;
-  takes_initiative: string | null;
-  notes: string | null;
+type CheckinEntry = {
+  id: string;
+  date: string;
+  manager: string;
+  ratings: {
+    teamPlayer: CheckinRating | "";
+    customerFocus: CheckinRating | "";
+    qualityFocus: CheckinRating | "";
+    integrity: CheckinRating | "";
+    reliability: CheckinRating | "";
+    upbeatFriendly: CheckinRating | "";
+    takesInitiative: CheckinRating | "";
+  };
 };
 
-type DocumentRow = {
-  id: number;
-  employee_id: number;
-  document_date: string;
-  label: string | null;
-  file_name: string | null;
-  file_type: string | null;
-  file_url: string | null;
-  uploaded_by: string | null;
-};
-
-type AttendanceRow = {
-  id: number;
-  employee_id: number;
-  incident_date: string;
-  incident_type: string;
+type AttendanceEntry = {
+  id: string;
+  date: string;
+  type: string;
   reason: string;
-  write_up: boolean | null;
+  createdBy: string;
 };
 
-type ReviewRow = {
-  id: number;
-  employee_id: number;
-  review_date: string;
-  review_type: string;
-  manager_name: string | null;
-  total_score: number | null;
-  next_review_date: string | null;
+type DocumentEntry = {
+  id: string;
+  date: string;
+  name: string;
+  uploadedBy: string;
+  filePath: string;
+  publicUrl: string;
 };
 
 type Employee = {
   id: string;
-  dbId: number;
   name: string;
   title: string;
   storeId: string;
@@ -131,53 +123,16 @@ type Employee = {
   assignedTrainer: string;
   insuranceApproved: boolean;
   adpSignedUp: boolean;
+  pay: PayEntry[];
+  notes: NoteEntry[];
+  goals: GoalEntry[];
+  checkins: CheckinEntry[];
+  attendance: AttendanceEntry[];
+  documents: DocumentEntry[];
+  reviewHistory: ReviewHistoryEntry[];
   terminated: boolean;
   terminationReason?: string;
   terminationDate?: string;
-  notes: {
-    id: number;
-    date: string;
-    manager: string;
-    text: string;
-  }[];
-  goals: {
-    id: number;
-    date: string;
-    manager: string;
-    goal: string;
-    support: string;
-  }[];
-  checkins: {
-    id: number;
-    date: string;
-    manager: string;
-    ratings: Record<string, string>;
-    notes: string;
-  }[];
-  documents: {
-    id: number;
-    date: string;
-    label: string;
-    fileName: string;
-    fileType: string;
-    fileUrl: string;
-    uploadedBy: string;
-  }[];
-  attendance: {
-    id: number;
-    date: string;
-    type: string;
-    reason: string;
-    writeUp: boolean;
-  }[];
-  reviewHistory: {
-    id: number;
-    date: string;
-    manager: string;
-    total: number;
-    type: string;
-    nextReviewDate: string;
-  }[];
 };
 
 type AuditEntry = {
@@ -188,26 +143,128 @@ type AuditEntry = {
   target: string;
 };
 
-const CHECKIN_CATEGORIES = [
-  "Team Player",
-  "Customer Focus",
-  "Quality Focus",
-  "Integrity",
-  "Reliability",
-  "Upbeat/Friendly",
-  "Takes Initiative",
+type ManagerRow = {
+  id: number | string;
+  name: string;
+  email?: string | null;
+  role?: string | null;
+  store_id: number | string | null;
+};
+
+type StoreRow = {
+  id: number | string;
+  name: string;
+};
+
+type EmployeeNoteRow = {
+  id: number;
+  employee_id: number;
+  note_date: string;
+  note_text: string;
+  manager_name: string | null;
+};
+
+type EmployeeGoalRow = {
+  id: number;
+  employee_id: number;
+  goal?: string | null;
+  goal_text?: string | null;
+  support?: string | null;
+  support_text?: string | null;
+  goal_date: string;
+  manager_name: string | null;
+};
+
+type EmployeeCheckinRow = {
+  id: number;
+  employee_id: number;
+  checkin_date: string;
+  manager_name: string | null;
+  team_player?: string | null;
+  customer_focus?: string | null;
+  quality_focus?: string | null;
+  integrity?: string | null;
+  reliability?: string | null;
+  upbeat_friendly?: string | null;
+  takes_initiative?: string | null;
+};
+
+type EmployeeAttendanceRow = {
+  id: number;
+  employee_id: number;
+  issue_date: string;
+  issue_type: string;
+  reason: string | null;
+  created_by: string | null;
+};
+
+type EmployeeDocumentRow = {
+  id: number;
+  employee_id: number;
+  document_date: string;
+  name: string;
+  file_path: string;
+  public_url: string | null;
+  uploaded_by: string | null;
+};
+
+type EmployeeReviewRow = {
+  id: number;
+  employee_id: number;
+  review_date: string;
+  manager_name: string | null;
+  review_type: string | null;
+  total_score: number | null;
+  customer_service?: number | null;
+  product_quality?: number | null;
+  food_safety?: number | null;
+  productivity?: number | null;
+  communication?: number | null;
+  dependability?: number | null;
+  job_knowledge?: number | null;
+  safety?: number | null;
+};
+
+type EmployeePayRow = {
+  id: number;
+  employee_id: number;
+  effective_date: string;
+  title: string;
+  rate: string;
+  tips_eligible: string | null;
+  entered_by: string | null;
+};
+
+const MONTHLY_CHECKIN_ITEMS = [
+  { key: "teamPlayer", label: "Team Player" },
+  { key: "customerFocus", label: "Customer Focus" },
+  { key: "qualityFocus", label: "Quality Focus" },
+  { key: "integrity", label: "Integrity" },
+  { key: "reliability", label: "Reliability" },
+  { key: "upbeatFriendly", label: "Upbeat/Friendly" },
+  { key: "takesInitiative", label: "Takes Initiative" },
 ] as const;
 
-const REVIEW_CATEGORIES = [
-  "Customer Service",
-  "Product Quality",
-  "Food Safety & Cleanliness",
-  "Productivity / Initiative",
-  "Cooperation & Communication",
-  "Dependability",
-  "Job Knowledge",
-  "Safety & Safe Practices",
-] as const;
+function emptyCheckinRatings() {
+  return {
+    teamPlayer: "" as CheckinRating | "",
+    customerFocus: "" as CheckinRating | "",
+    qualityFocus: "" as CheckinRating | "",
+    integrity: "" as CheckinRating | "",
+    reliability: "" as CheckinRating | "",
+    upbeatFriendly: "" as CheckinRating | "",
+    takesInitiative: "" as CheckinRating | "",
+  };
+}
+
+function isOverdue(date: string) {
+  if (!date) return false;
+  return new Date(date) < new Date(new Date().toISOString().slice(0, 10));
+}
+
+function daysSince(date: string) {
+  return Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
+}
 
 function nowStamp() {
   return new Date().toISOString().replace("T", " ").slice(0, 16);
@@ -217,15 +274,6 @@ function addMonthsToToday(months: number) {
   const d = new Date();
   d.setMonth(d.getMonth() + months);
   return d.toISOString().slice(0, 10);
-}
-
-function isOverdue(date: string) {
-  if (!date) return false;
-  return new Date(date) < new Date();
-}
-
-function daysSince(date: string) {
-  return Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
 }
 
 function toStoreKey(storeId: number | string | null | undefined) {
@@ -238,42 +286,66 @@ function fromStoreKey(storeKey: string | null | undefined) {
   return Number(storeKey.replace("s", ""));
 }
 
-function scoreTotal(scores: Record<string, number>) {
-  return Object.values(scores).reduce((sum, n) => sum + n, 0);
-}
-
-async function readFileAsDataUrl(file: File): Promise<string> {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+function normalizeCheckinRating(value: string | null | undefined): CheckinRating | "" {
+  if (value === "+" || value === "+/-" || value === "-") return value;
+  return "";
 }
 
 export default function Page() {
-  const [loading, setLoading] = useState(true);
-
-  const [stores, setStores] = useState<StoreRow[]>([]);
-  const [managers, setManagers] = useState<ManagerRow[]>([]);
-  const [employeeRows, setEmployeeRows] = useState<EmployeeRow[]>([]);
-  const [noteRows, setNoteRows] = useState<NoteRow[]>([]);
-  const [goalRows, setGoalRows] = useState<GoalRow[]>([]);
-  const [checkinRows, setCheckinRows] = useState<CheckinRow[]>([]);
-  const [documentRows, setDocumentRows] = useState<DocumentRow[]>([]);
-  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
-  const [reviewRows, setReviewRows] = useState<ReviewRow[]>([]);
-
+  const [stores, setStores] = useState<StoreType[]>([]);
   const [currentUserId, setCurrentUserId] = useState("owner");
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "pay" | "checkin" | "review6" | "notes" | "documents" | "attendance" | "term"
-  >("overview");
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [managers, setManagers] = useState<ManagerRow[]>([]);
+  const [employeeNotes, setEmployeeNotes] = useState<EmployeeNoteRow[]>([]);
+  const [employeeGoals, setEmployeeGoals] = useState<EmployeeGoalRow[]>([]);
+  const [employeeCheckins, setEmployeeCheckins] = useState<EmployeeCheckinRow[]>([]);
+  const [employeeAttendance, setEmployeeAttendance] = useState<EmployeeAttendanceRow[]>([]);
+  const [employeeDocuments, setEmployeeDocuments] = useState<EmployeeDocumentRow[]>([]);
+  const [employeeReviews, setEmployeeReviews] = useState<EmployeeReviewRow[]>([]);
+  const [employeePay, setEmployeePay] = useState<EmployeePayRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([
     { id: 1, ts: "2026-04-10 09:10", user: "Maria", action: "Completed review", target: "Jamie Chen" },
     { id: 2, ts: "2026-04-10 08:20", user: "Derek", action: "Added note", target: "Priya Singh" },
   ]);
+
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "pay" | "checkins" | "review" | "notes" | "documents" | "attendance" | "term"
+  >("overview");
+
+  const [newNote, setNewNote] = useState("");
+  const [newGoal, setNewGoal] = useState("");
+  const [newGoalSupport, setNewGoalSupport] = useState("");
+
+  const [attendanceType, setAttendanceType] = useState("Late");
+  const [attendanceReason, setAttendanceReason] = useState("");
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const [terminationReason, setTerminationReason] = useState("");
+  const [checkinRatings, setCheckinRatings] = useState(emptyCheckinRatings());
+  const [documentDate, setDocumentDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const [newPayTitle, setNewPayTitle] = useState("");
+  const [newPayRate, setNewPayRate] = useState("");
+  const [newPayDate, setNewPayDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newTipsEligible, setNewTipsEligible] = useState<"Yes" | "No">("Yes");
+
+  const [expandedCheckinId, setExpandedCheckinId] = useState<string | null>(null);
+  const [expandedReviewId, setExpandedReviewId] = useState<string | null>(null);
+
+  const [reviewScores, setReviewScores] = useState<Record<string, number>>({
+    "Customer Service": 0,
+    "Product Quality": 0,
+    "Food Safety": 0,
+    "Productivity": 0,
+    "Communication": 0,
+    "Dependability": 0,
+    "Job Knowledge": 0,
+    "Safety": 0,
+  });
 
   useEffect(() => {
     async function load() {
@@ -281,153 +353,160 @@ export default function Page() {
       await Promise.all([
         fetchStores(),
         fetchManagers(),
-        fetchEmployees(),
-        fetchNotes(),
-        fetchGoals(),
-        fetchCheckins(),
-        fetchDocuments(),
-        fetchAttendance(),
-        fetchReviews(),
+        fetchEmployeeNotes(),
+        fetchEmployeeGoals(),
+        fetchEmployeeCheckins(),
+        fetchEmployeeAttendance(),
+        fetchEmployeeDocuments(),
+        fetchEmployeeReviews(),
+        fetchEmployeePay(),
       ]);
+      await fetchEmployees();
       setLoading(false);
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      fetchEmployees();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    employeeNotes,
+    employeeGoals,
+    employeeCheckins,
+    employeeAttendance,
+    employeeDocuments,
+    employeeReviews,
+    employeePay,
+  ]);
 
   async function fetchStores() {
     const { data, error } = await supabase.from("stores").select("*").order("id");
     if (error) {
-      console.error("STORES ERROR:", error);
+      console.error("STORES ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setStores((data as StoreRow[]) || []);
+
+    const mapped: StoreType[] = ((data as StoreRow[]) || []).map((row) => ({
+      id: `s${row.id}`,
+      name: row.name,
+    }));
+    setStores(mapped);
   }
 
   async function fetchManagers() {
     const { data, error } = await supabase.from("managers").select("*").order("id");
     if (error) {
-      console.error("MANAGERS ERROR:", error);
+      console.error("MANAGERS ERROR:", JSON.stringify(error, null, 2));
       return;
     }
     setManagers((data as ManagerRow[]) || []);
   }
 
-  async function fetchEmployees() {
-    const { data, error } = await supabase.from("employees").select("*").order("id");
-    if (error) {
-      console.error("EMPLOYEES ERROR:", error);
-      return;
-    }
-    setEmployeeRows((data as EmployeeRow[]) || []);
-  }
-
-  async function fetchNotes() {
+  async function fetchEmployeeNotes() {
     const { data, error } = await supabase
       .from("employee_notes")
       .select("*")
       .order("id", { ascending: false });
+
     if (error) {
-      console.error("NOTES ERROR:", error);
+      console.error("EMPLOYEE NOTES ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setNoteRows((data as NoteRow[]) || []);
+    setEmployeeNotes((data as EmployeeNoteRow[]) || []);
   }
 
-  async function fetchGoals() {
+  async function fetchEmployeeGoals() {
     const { data, error } = await supabase
       .from("employee_goals")
       .select("*")
-      .order("id", { ascending: false });
+      .order("goal_date", { ascending: false });
+
     if (error) {
-      console.error("GOALS ERROR:", error);
+      console.error("EMPLOYEE GOALS ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setGoalRows((data as GoalRow[]) || []);
+    setEmployeeGoals((data as EmployeeGoalRow[]) || []);
   }
 
-  async function fetchCheckins() {
+  async function fetchEmployeeCheckins() {
     const { data, error } = await supabase
       .from("employee_checkins")
       .select("*")
-      .order("id", { ascending: false });
+      .order("checkin_date", { ascending: false });
+
     if (error) {
-      console.error("CHECKINS ERROR:", error);
+      console.error("EMPLOYEE CHECKINS ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setCheckinRows((data as CheckinRow[]) || []);
+    setEmployeeCheckins((data as EmployeeCheckinRow[]) || []);
   }
 
-  async function fetchDocuments() {
-    const { data, error } = await supabase
-      .from("employee_documents")
-      .select("*")
-      .order("id", { ascending: false });
-    if (error) {
-      console.error("DOCUMENTS ERROR:", error);
-      return;
-    }
-    setDocumentRows((data as DocumentRow[]) || []);
-  }
-
-  async function fetchAttendance() {
+  async function fetchEmployeeAttendance() {
     const { data, error } = await supabase
       .from("employee_attendance")
       .select("*")
-      .order("id", { ascending: false });
+      .order("issue_date", { ascending: false });
+
     if (error) {
-      console.error("ATTENDANCE ERROR:", error);
+      console.error("EMPLOYEE ATTENDANCE ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setAttendanceRows((data as AttendanceRow[]) || []);
+    setEmployeeAttendance((data as EmployeeAttendanceRow[]) || []);
   }
 
-  async function fetchReviews() {
+  async function fetchEmployeeDocuments() {
+    const { data, error } = await supabase
+      .from("employee_documents")
+      .select("*")
+      .order("document_date", { ascending: false });
+
+    if (error) {
+      console.error("EMPLOYEE DOCUMENTS ERROR:", JSON.stringify(error, null, 2));
+      return;
+    }
+    setEmployeeDocuments((data as EmployeeDocumentRow[]) || []);
+  }
+
+  async function fetchEmployeeReviews() {
     const { data, error } = await supabase
       .from("employee_reviews")
       .select("*")
-      .order("id", { ascending: false });
+      .order("review_date", { ascending: false });
+
     if (error) {
-      console.error("REVIEWS ERROR:", error);
+      console.error("EMPLOYEE REVIEWS ERROR:", JSON.stringify(error, null, 2));
       return;
     }
-    setReviewRows((data as ReviewRow[]) || []);
+    setEmployeeReviews((data as EmployeeReviewRow[]) || []);
   }
 
-  const currentUser: User = useMemo(() => {
-    if (currentUserId === "owner") {
-      return { id: "owner", name: "Owner (You)", role: "owner", storeId: null };
+  async function fetchEmployeePay() {
+    const { data, error } = await supabase
+      .from("employee_pay")
+      .select("*")
+      .order("effective_date", { ascending: false });
+
+    if (error) {
+      console.error("EMPLOYEE PAY ERROR:", JSON.stringify(error, null, 2));
+      return;
+    }
+    setEmployeePay((data as EmployeePayRow[]) || []);
+  }
+
+  async function fetchEmployees() {
+    const { data, error } = await supabase.from("employees").select("*").order("id");
+
+    if (error) {
+      console.error("EMPLOYEES ERROR:", JSON.stringify(error, null, 2));
+      return;
     }
 
-    const manager = managers.find((m) => `gm-${m.id}` === currentUserId);
-    if (!manager) {
-      return { id: "owner", name: "Owner (You)", role: "owner", storeId: null };
-    }
-
-    return {
-      id: `gm-${manager.id}`,
-      name: manager.name,
-      role: "gm",
-      storeId: toStoreKey(manager.store_id),
-    };
-  }, [currentUserId, managers]);
-
-  const dynamicUsers: User[] = useMemo(() => {
-    const owner: User = { id: "owner", name: "Owner (You)", role: "owner", storeId: null };
-    const gms: User[] = managers
-      .filter((m) => (m.role || "").toLowerCase() !== "owner")
-      .map((m) => ({
-        id: `gm-${m.id}`,
-        name: m.name,
-        role: "gm" as Role,
-        storeId: toStoreKey(m.store_id),
-      }));
-    return [owner, ...gms];
-  }, [managers]);
-
-  const employees: Employee[] = useMemo(() => {
-    return employeeRows.map((row) => ({
+    const mapped: Employee[] = (data || []).map((row: any) => ({
       id: String(row.id),
-      dbId: row.id,
       name: row.name ?? "",
       title: row.title ?? "Team Member",
       storeId: toStoreKey(row.store_id),
@@ -436,227 +515,435 @@ export default function Page() {
       assignedTrainer: row.assigned_trainer ?? "",
       insuranceApproved: row.insurance_approved ?? false,
       adpSignedUp: row.adp_signed_up ?? false,
+
+      pay: employeePay
+        .filter((entry) => String(entry.employee_id) === String(row.id))
+        .map((entry) => ({
+          id: String(entry.id),
+          title: entry.title,
+          rate: entry.rate,
+          date: entry.effective_date,
+          tipsEligible: (entry.tips_eligible === "No" ? "No" : "Yes") as "Yes" | "No",
+          enteredBy: entry.entered_by ?? "",
+        })),
+
+      notes: employeeNotes
+        .filter((note) => String(note.employee_id) === String(row.id))
+        .map((note) => ({
+          date: note.note_date,
+          text: note.note_text,
+          manager: note.manager_name ?? "",
+        })),
+
+goals: employeeGoals
+  .filter((goal) => String(goal.employee_id) === String(row.id))
+  .map((goal) => ({
+    id: String(goal.id),
+    date: goal.goal_date,
+    goal: goal.goal ?? goal.goal_text ?? "",
+    support: goal.support ?? goal.support_text ?? "",
+    manager: goal.manager_name ?? "",
+  })),
+
+      checkins: employeeCheckins
+        .filter((checkin) => String(checkin.employee_id) === String(row.id))
+        .map((checkin) => ({
+          id: String(checkin.id),
+          date: checkin.checkin_date,
+          manager: checkin.manager_name ?? "",
+          ratings: {
+            teamPlayer: normalizeCheckinRating(checkin.team_player),
+            customerFocus: normalizeCheckinRating(checkin.customer_focus),
+            qualityFocus: normalizeCheckinRating(checkin.quality_focus),
+            integrity: normalizeCheckinRating(checkin.integrity),
+            reliability: normalizeCheckinRating(checkin.reliability),
+            upbeatFriendly: normalizeCheckinRating(checkin.upbeat_friendly),
+            takesInitiative: normalizeCheckinRating(checkin.takes_initiative),
+          },
+        })),
+
+      attendance: employeeAttendance
+        .filter((entry) => String(entry.employee_id) === String(row.id))
+        .map((entry) => ({
+          id: String(entry.id),
+          date: entry.issue_date,
+          type: entry.issue_type,
+          reason: entry.reason ?? "",
+          createdBy: entry.created_by ?? "",
+        })),
+
+      documents: employeeDocuments
+        .filter((doc) => String(doc.employee_id) === String(row.id))
+        .map((doc) => ({
+          id: String(doc.id),
+          date: doc.document_date,
+          name: doc.name,
+          uploadedBy: doc.uploaded_by ?? "",
+          filePath: doc.file_path,
+          publicUrl: doc.public_url ?? "",
+        })),
+
+      reviewHistory: employeeReviews
+        .filter((review) => String(review.employee_id) === String(row.id))
+        .map((review) => ({
+          id: String(review.id),
+          date: review.review_date,
+          manager: review.manager_name ?? "",
+          total: review.total_score ?? 0,
+          type: review.review_type ?? "6-month",
+          scores: {
+            customerService: review.customer_service ?? 0,
+            productQuality: review.product_quality ?? 0,
+            foodSafety: review.food_safety ?? 0,
+            productivity: review.productivity ?? 0,
+            communication: review.communication ?? 0,
+            dependability: review.dependability ?? 0,
+            jobKnowledge: review.job_knowledge ?? 0,
+            safety: review.safety ?? 0,
+          },
+        })),
+
       terminated: row.terminated ?? false,
       terminationReason: row.termination_reason ?? undefined,
       terminationDate: row.termination_date ?? undefined,
-      notes: noteRows
-        .filter((n) => n.employee_id === row.id)
-        .map((n) => ({
-          id: n.id,
-          date: n.note_date,
-          manager: n.manager_name ?? "",
-          text: n.note_text,
-        })),
-      goals: goalRows
-        .filter((g) => g.employee_id === row.id)
-        .map((g) => ({
-          id: g.id,
-          date: g.goal_date,
-          manager: g.manager_name ?? "",
-          goal: g.goal_text,
-          support: g.support_text ?? "",
-        })),
-      checkins: checkinRows
-        .filter((c) => c.employee_id === row.id)
-        .map((c) => ({
-          id: c.id,
-          date: c.checkin_date,
-          manager: c.manager_name ?? "",
-          ratings: {
-            "Team Player": c.team_player ?? "",
-            "Customer Focus": c.customer_focus ?? "",
-            "Quality Focus": c.quality_focus ?? "",
-            Integrity: c.integrity ?? "",
-            Reliability: c.reliability ?? "",
-            "Upbeat/Friendly": c.upbeat_friendly ?? "",
-            "Takes Initiative": c.takes_initiative ?? "",
-          },
-          notes: c.notes ?? "",
-        })),
-      documents: documentRows
-        .filter((d) => d.employee_id === row.id)
-        .map((d) => ({
-          id: d.id,
-          date: d.document_date,
-          label: d.label ?? "",
-          fileName: d.file_name ?? "",
-          fileType: d.file_type ?? "",
-          fileUrl: d.file_url ?? "",
-          uploadedBy: d.uploaded_by ?? "",
-        })),
-      attendance: attendanceRows
-        .filter((a) => a.employee_id === row.id)
-        .map((a) => ({
-          id: a.id,
-          date: a.incident_date,
-          type: a.incident_type,
-          reason: a.reason,
-          writeUp: a.write_up ?? false,
-        })),
-      reviewHistory: reviewRows
-        .filter((r) => r.employee_id === row.id)
-        .map((r) => ({
-          id: r.id,
-          date: r.review_date,
-          manager: r.manager_name ?? "",
-          total: r.total_score ?? 0,
-          type: r.review_type ?? "6-month",
-          nextReviewDate: r.next_review_date ?? "",
-        })),
     }));
-  }, [employeeRows, noteRows, goalRows, checkinRows, documentRows, attendanceRows, reviewRows]);
+
+    setEmployees(mapped);
+  }
+
+  const dynamicUsers: User[] = useMemo(() => {
+    const owner: User = {
+      id: "owner",
+      name: "Owner (You)",
+      role: "owner",
+      storeId: null,
+    };
+
+    const gmUsers: User[] = managers
+      .filter((manager) => manager.role !== "owner")
+      .map((manager) => ({
+        id: `gm-${manager.id}`,
+        name: manager.name,
+        role: "gm" as Role,
+        storeId: toStoreKey(manager.store_id),
+      }));
+
+    return [owner, ...gmUsers];
+  }, [managers]);
+
+  const currentUser =
+    dynamicUsers.find((u) => u.id === currentUserId) ??
+    dynamicUsers[0] ?? {
+      id: "owner",
+      name: "Owner (You)",
+      role: "owner" as Role,
+      storeId: null,
+    };
+
+  function storeName(storeId: string) {
+    return stores.find((s) => s.id === storeId)?.name ?? "Unknown store";
+  }
+
+  function managerNameForStore(storeId: string) {
+    const gm = managers.find(
+      (m) => m.role === "manager" && toStoreKey(m.store_id) === storeId
+    );
+    return gm?.name ?? "";
+  }
 
   const visibleEmployees = useMemo(() => {
-    if (currentUser.role === "owner") {
-      return employees.filter((e) => !e.terminated);
-    }
+    if (currentUser.role === "owner") return employees.filter((e) => !e.terminated);
     return employees.filter((e) => !e.terminated && e.storeId === currentUser.storeId);
   }, [employees, currentUser]);
 
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId) ?? null;
 
-  function storeName(storeKey: string) {
-    const store = stores.find((s) => toStoreKey(s.id) === storeKey);
-    return store?.name ?? "Unknown store";
-  }
+  const overdueReviews = visibleEmployees.filter((e) => e.nextReviewDue && isOverdue(e.nextReviewDue));
+
+  const checkinsOverdue = visibleEmployees.filter((e) => {
+    const last = e.checkins[0];
+    if (!last) return true;
+    return daysSince(last.date) > 30;
+  });
+
+  const attendanceAlerts = visibleEmployees.filter((e) => {
+    const recent = e.attendance.filter((a) => daysSince(a.date) <= 30);
+    return recent.length >= 3;
+  });
+
+  const ownerStoreRollup = stores.map((store) => {
+    const list = employees.filter((e) => !e.terminated && e.storeId === store.id);
+    return {
+      ...store,
+      employees: list.length,
+      overdueReviews: list.filter((e) => e.nextReviewDue && isOverdue(e.nextReviewDue)).length,
+      overdueCheckins: list.filter((e) => {
+        const last = e.checkins[0];
+        if (!last) return true;
+        return daysSince(last.date) > 30;
+      }).length,
+    };
+  });
 
   function logAudit(action: string, target: string) {
     setAudit((prev) => [
-      { id: Date.now(), ts: nowStamp(), user: currentUser.name, action, target },
+      {
+        id: Date.now(),
+        ts: nowStamp(),
+        user: currentUser.name,
+        action,
+        target,
+      },
       ...prev,
     ]);
   }
 
-  async function patchEmployee(dbId: number, patch: Partial<EmployeeRow>) {
-    const { error } = await supabase.from("employees").update(patch).eq("id", dbId);
-    if (error) {
-      console.error("PATCH EMPLOYEE ERROR:", error);
-      alert(error.message || "Could not update employee.");
-      return;
-    }
-    await fetchEmployees();
+  function updateEmployeeLocal(id: string, patch: Partial<Employee>) {
+    setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }
 
   async function addStore() {
     if (currentUser.role !== "owner") return;
-    const name = prompt("Store name?");
-    if (!name?.trim()) return;
 
-    const { error } = await supabase.from("stores").insert([{ name: name.trim() }]);
+    const storeNameInput = prompt("Store name?");
+    if (!storeNameInput?.trim()) return;
+
+    const trimmedName = storeNameInput.trim();
+
+    const exists = stores.some(
+      (store) => store.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (exists) {
+      alert("That store already exists.");
+      return;
+    }
+
+    const { error } = await supabase.from("stores").insert([{ name: trimmedName }]);
+
     if (error) {
-      console.error("ADD STORE ERROR:", error);
+      console.error("ADD STORE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not add store.");
       return;
     }
 
-    logAudit("Added store", name.trim());
+    logAudit("Added store", trimmedName);
     await fetchStores();
   }
 
   async function addManager() {
     if (currentUser.role !== "owner") return;
-    const name = prompt("Manager name?");
-    if (!name?.trim()) return;
 
-    const options = stores.map((s) => `${s.id}: ${s.name}`).join("\n");
-    const chosen = prompt(`Store number:\n\n${options}`, String(stores[0]?.id || 1));
+    if (stores.length === 0) {
+      alert("No stores found.");
+      return;
+    }
+
+    const managerName = prompt("Manager name?");
+    if (!managerName?.trim()) return;
+
+    const managerEmail = prompt("Manager email?") ?? "";
+
+    const options = stores.map((s) => `${s.id.replace("s", "")}: ${s.name}`).join("\n");
+    const chosen = prompt(`Enter store number for this manager:\n\n${options}`, "1");
     if (!chosen) return;
 
-    const storeId = Number(chosen);
-    if (!storeId) {
+    const storeIdNumber = Number(chosen);
+    if (!storeIdNumber || Number.isNaN(storeIdNumber)) {
+      alert("Invalid store.");
+      return;
+    }
+
+    const matchingStore = stores.find((s) => s.id === `s${storeIdNumber}`);
+    if (!matchingStore) {
+      alert("That store does not exist.");
+      return;
+    }
+
+    const { error } = await supabase.from("managers").insert([
+      {
+        name: managerName.trim(),
+        email: managerEmail.trim() || null,
+        role: "manager",
+        store_id: storeIdNumber,
+      },
+    ]);
+
+    if (error) {
+      console.error("ADD MANAGER ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not add manager.");
+      return;
+    }
+
+    logAudit("Added manager", `${managerName.trim()} · ${matchingStore.name}`);
+    await fetchManagers();
+  }
+
+  async function editManager(manager: ManagerRow) {
+    if (currentUser.role !== "owner") return;
+
+    const newName = prompt("Edit manager name:", manager.name);
+    if (!newName?.trim()) return;
+
+    const newEmail = prompt("Edit manager email:", manager.email ?? "") ?? "";
+
+    const options = stores.map((s) => `${s.id.replace("s", "")}: ${s.name}`).join("\n");
+    const chosenStore = prompt(
+      `Enter new store number for ${newName.trim()}:\n\n${options}`,
+      String(manager.store_id ?? "")
+    );
+
+    if (!chosenStore) return;
+
+    const storeIdNumber = Number(chosenStore);
+    if (!storeIdNumber || Number.isNaN(storeIdNumber)) {
       alert("Invalid store.");
       return;
     }
 
     const { error } = await supabase
       .from("managers")
-      .insert([{ name: name.trim(), role: "manager", store_id: storeId }]);
+      .update({
+        name: newName.trim(),
+        email: newEmail.trim() || null,
+        store_id: storeIdNumber,
+      })
+      .eq("id", manager.id);
 
     if (error) {
-      console.error("ADD MANAGER ERROR:", error);
-      alert(error.message || "Could not add manager.");
+      console.error("EDIT MANAGER ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not update manager.");
       return;
     }
 
-    logAudit("Added manager", `${name.trim()} → ${stores.find((s) => s.id === storeId)?.name ?? ""}`);
+    logAudit("Edited manager", newName.trim());
+    await fetchManagers();
+  }
+
+  async function deleteManager(manager: ManagerRow) {
+    if (currentUser.role !== "owner") return;
+
+    const confirmed = window.confirm(`Delete manager ${manager.name}?`);
+    if (!confirmed) return;
+
+    const { error } = await supabase.from("managers").delete().eq("id", manager.id);
+
+    if (error) {
+      console.error("DELETE MANAGER ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not delete manager.");
+      return;
+    }
+
+    logAudit("Deleted manager", manager.name);
     await fetchManagers();
   }
 
   async function changeManagerStore() {
     if (currentUser.role !== "owner") return;
 
-    const managerOnly = managers.filter((m) => (m.role || "").toLowerCase() !== "owner");
+    const managerOnly = managers.filter((m) => m.role === "manager");
+
     if (managerOnly.length === 0) {
       alert("No managers found.");
       return;
     }
 
     const managerOptions = managerOnly
-      .map((m) => `${m.id}: ${m.name} (${stores.find((s) => s.id === m.store_id)?.name ?? "No store"})`)
+      .map((m) => `${m.id}: ${m.name} (current store: ${storeName(toStoreKey(m.store_id))})`)
       .join("\n");
 
-    const chosenManager = prompt(`Manager ID to move:\n\n${managerOptions}`);
-    if (!chosenManager) return;
+    const chosenManagerId = prompt(
+      `Enter the manager ID you want to move:\n\n${managerOptions}`
+    );
 
-    const manager = managerOnly.find((m) => String(m.id) === String(chosenManager));
-    if (!manager) {
+    if (!chosenManagerId) return;
+
+    const managerToMove = managerOnly.find(
+      (m) => String(m.id) === String(chosenManagerId)
+    );
+
+    if (!managerToMove) {
       alert("Manager not found.");
       return;
     }
 
-    const storeOptions = stores.map((s) => `${s.id}: ${s.name}`).join("\n");
-    const chosenStore = prompt(`New store ID:\n\n${storeOptions}`);
+    const storeOptions = stores
+      .map((s) => `${s.id.replace("s", "")}: ${s.name}`)
+      .join("\n");
+
+    const chosenStore = prompt(
+      `Enter the new store number for ${managerToMove.name}:\n\n${storeOptions}`
+    );
+
     if (!chosenStore) return;
 
-    const storeId = Number(chosenStore);
-    if (!storeId) {
+    const storeIdNumber = Number(chosenStore);
+
+    if (!storeIdNumber || Number.isNaN(storeIdNumber)) {
       alert("Invalid store.");
       return;
     }
 
-    const { error } = await supabase.from("managers").update({ store_id: storeId }).eq("id", manager.id);
+    const matchingStore = stores.find((s) => s.id === `s${storeIdNumber}`);
+
+    if (!matchingStore) {
+      alert("That store does not exist.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("managers")
+      .update({ store_id: storeIdNumber })
+      .eq("id", managerToMove.id);
+
     if (error) {
-      console.error("CHANGE MANAGER STORE ERROR:", error);
+      console.error("CHANGE MANAGER STORE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not change manager store.");
       return;
     }
 
-    logAudit("Changed manager store", `${manager.name} → ${stores.find((s) => s.id === storeId)?.name ?? ""}`);
+    logAudit("Changed manager store", `${managerToMove.name} → ${matchingStore.name}`);
     await fetchManagers();
   }
 
   async function addEmployee() {
-    const name = prompt("Employee name?");
-    if (!name?.trim()) return;
-
-    let storeId: number | null = null;
-    if (currentUser.role === "gm") {
-      storeId = fromStoreKey(currentUser.storeId);
-    } else {
-      const options = stores.map((s) => `${s.id}: ${s.name}`).join("\n");
-      const chosen = prompt(`Store number:\n\n${options}`, String(stores[0]?.id || 1));
-      if (!chosen) return;
-      storeId = Number(chosen);
+    if (stores.length === 0) {
+      alert("No stores found.");
+      return;
     }
 
-    if (!storeId) {
+    const employeeName = prompt("Employee name?");
+    if (!employeeName?.trim()) return;
+
+    let storeIdNumber: number | null = null;
+
+    if (currentUser.role === "gm") {
+      storeIdNumber = fromStoreKey(currentUser.storeId);
+    } else {
+      const options = stores.map((s) => `${s.id.replace("s", "")}: ${s.name}`).join("\n");
+      const chosen = prompt(`Enter store number for this employee:\n\n${options}`, "1");
+      if (!chosen) return;
+      storeIdNumber = Number(chosen);
+    }
+
+    if (!storeIdNumber || Number.isNaN(storeIdNumber)) {
       alert("Invalid store.");
       return;
     }
 
-    const managerForStore =
+    const assignedTrainer =
       currentUser.role === "gm"
         ? currentUser.name
-        : managers.find((m) => m.store_id === storeId && (m.role || "").toLowerCase() !== "owner")?.name ?? "";
+        : managerNameForStore(`s${storeIdNumber}`);
 
     const { error } = await supabase.from("employees").insert([
       {
-        name: name.trim(),
+        name: employeeName.trim(),
         title: "Team Member",
-        store_id: storeId,
+        store_id: storeIdNumber,
         start_date: new Date().toISOString().slice(0, 10),
-        next_review_due: addMonthsToToday(1),
-        assigned_trainer: managerForStore,
+        next_review_due: addMonthsToToday(6),
+        assigned_trainer: assignedTrainer,
         insurance_approved: false,
         adp_signed_up: false,
         terminated: false,
@@ -664,211 +951,299 @@ export default function Page() {
     ]);
 
     if (error) {
-      console.error("ADD EMPLOYEE ERROR:", error);
+      console.error("ADD EMPLOYEE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not add employee.");
       return;
     }
 
-    logAudit("Added employee", name.trim());
+    logAudit("Added employee", employeeName.trim());
     await fetchEmployees();
   }
 
-  async function deleteEmployee(employee: Employee) {
-    const confirmed = window.confirm(`Delete ${employee.name}?`);
+  async function deleteEmployee(id: number, name: string) {
+    const confirmed = window.confirm(`Delete ${name}?`);
     if (!confirmed) return;
 
-    const { error } = await supabase.from("employees").delete().eq("id", employee.dbId);
+    const { error } = await supabase.from("employees").delete().eq("id", id);
+
     if (error) {
-      console.error("DELETE EMPLOYEE ERROR:", error);
+      console.error("DELETE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not delete employee.");
       return;
     }
 
-    logAudit("Deleted employee", employee.name);
+    logAudit("Deleted employee", name);
     await fetchEmployees();
   }
 
-  async function addNote(employee: Employee, text: string) {
+  async function addNote() {
+    if (!selectedEmployee || !newNote.trim()) return;
+
     const { error } = await supabase.from("employee_notes").insert([
       {
-        employee_id: employee.dbId,
-        note_text: text,
+        employee_id: Number(selectedEmployee.id),
+        note_text: newNote.trim(),
         manager_name: currentUser.name,
       },
     ]);
 
     if (error) {
-      console.error("ADD NOTE ERROR:", error);
+      console.error("ADD NOTE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not save note.");
       return;
     }
 
-    logAudit("Added note", employee.name);
-    await fetchNotes();
+    logAudit("Added note", selectedEmployee.name);
+    setNewNote("");
+    await fetchEmployeeNotes();
   }
 
-  async function addGoal(employee: Employee, goalText: string, supportText: string) {
-    const { error } = await supabase.from("employee_goals").insert([
-      {
-        employee_id: employee.dbId,
-        goal_text: goalText,
-        support_text: supportText,
-        manager_name: currentUser.name,
-      },
-    ]);
+async function addGoal() {
+  if (!selectedEmployee || !newGoal.trim()) return;
 
-    if (error) {
-      console.error("ADD GOAL ERROR:", error);
-      alert(error.message || "Could not save goal.");
+  const payload = {
+    employee_id: Number(selectedEmployee.id),
+    goal: newGoal.trim(),
+    goal_text: newGoal.trim(),
+    support: newGoalSupport.trim(),
+    support_text: newGoalSupport.trim(),
+    manager_name: currentUser.name,
+  };
+
+  const { error } = await supabase.from("employee_goals").insert([payload]);
+
+  if (error) {
+    console.error("ADD GOAL ERROR:", JSON.stringify(error, null, 2));
+    alert(error.message || "Could not save goal.");
+    return;
+  }
+
+  logAudit("Added goal", selectedEmployee.name);
+  setNewGoal("");
+  setNewGoalSupport("");
+  await fetchEmployeeGoals();
+}
+
+  async function addCheckin() {
+    if (!selectedEmployee) return;
+
+    const hasAtLeastOneRating = Object.values(checkinRatings).some((value) => value !== "");
+
+    if (!hasAtLeastOneRating) {
+      alert("Please select at least one rating before saving the check-in.");
       return;
     }
 
-    logAudit("Added goal", employee.name);
-    await fetchGoals();
-  }
+    const payload = {
+      employee_id: Number(selectedEmployee.id),
+      manager_name: currentUser.name,
+      team_player: checkinRatings.teamPlayer || null,
+      customer_focus: checkinRatings.customerFocus || null,
+      quality_focus: checkinRatings.qualityFocus || null,
+      integrity: checkinRatings.integrity || null,
+      reliability: checkinRatings.reliability || null,
+      upbeat_friendly: checkinRatings.upbeatFriendly || null,
+      takes_initiative: checkinRatings.takesInitiative || null,
+    };
 
-  async function addCheckin(employee: Employee, ratings: Record<string, string>, notes: string) {
-    const { error } = await supabase.from("employee_checkins").insert([
-      {
-        employee_id: employee.dbId,
-        manager_name: currentUser.name,
-        team_player: ratings["Team Player"] || null,
-        customer_focus: ratings["Customer Focus"] || null,
-        quality_focus: ratings["Quality Focus"] || null,
-        integrity: ratings["Integrity"] || null,
-        reliability: ratings["Reliability"] || null,
-        upbeat_friendly: ratings["Upbeat/Friendly"] || null,
-        takes_initiative: ratings["Takes Initiative"] || null,
-        notes: notes || null,
-      },
-    ]);
+    const { error } = await supabase.from("employee_checkins").insert([payload]);
 
     if (error) {
-      console.error("ADD CHECKIN ERROR:", error);
+      console.error("ADD CHECKIN ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not save check-in.");
       return;
     }
 
-    logAudit("Submitted monthly check-in", employee.name);
-    await fetchCheckins();
+    logAudit("Logged monthly check-in", selectedEmployee.name);
+    setCheckinRatings(emptyCheckinRatings());
+    await fetchEmployeeCheckins();
   }
 
-  async function addAttendance(
-    employee: Employee,
-    incidentDate: string,
-    incidentType: string,
-    reason: string,
-    writeUp: boolean
-  ) {
+  async function addAttendance() {
+    if (!selectedEmployee || !attendanceReason.trim() || !attendanceDate) return;
+
     const { error } = await supabase.from("employee_attendance").insert([
       {
-        employee_id: employee.dbId,
-        incident_date: incidentDate,
-        incident_type: incidentType,
-        reason,
-        write_up: writeUp,
+        employee_id: Number(selectedEmployee.id),
+        issue_date: attendanceDate,
+        issue_type: attendanceType,
+        reason: attendanceReason.trim(),
+        created_by: currentUser.name,
       },
     ]);
 
     if (error) {
-      console.error("ADD ATTENDANCE ERROR:", error);
-      alert(error.message || "Could not save attendance.");
+      console.error("ADD ATTENDANCE ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not save attendance issue.");
       return;
     }
 
-    logAudit(`Logged attendance (${incidentType})`, employee.name);
-    await fetchAttendance();
+    logAudit(`Logged attendance: ${attendanceType}`, selectedEmployee.name);
+    setAttendanceReason("");
+    setAttendanceDate(new Date().toISOString().slice(0, 10));
+    await fetchEmployeeAttendance();
   }
 
-  async function addDocument(employee: Employee, label: string, file: File) {
-    const dataUrl = await readFileAsDataUrl(file);
+  async function uploadDocument(file: File | null) {
+    if (!selectedEmployee || !file) return;
 
-    const { error } = await supabase.from("employee_documents").insert([
+    setUploadingDocument(true);
+
+    try {
+      const safeName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const path = `employee-${selectedEmployee.id}/${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("employee-documents")
+        .upload(path, file, {
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("DOCUMENT UPLOAD ERROR:", JSON.stringify(uploadError, null, 2));
+        alert(uploadError.message || "Could not upload document.");
+        return;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from("employee-documents")
+        .getPublicUrl(path);
+
+      const { error: insertError } = await supabase.from("employee_documents").insert([
+        {
+          employee_id: Number(selectedEmployee.id),
+          document_date: documentDate,
+          name: file.name,
+          file_path: path,
+          public_url: publicData.publicUrl,
+          uploaded_by: currentUser.name,
+        },
+      ]);
+
+      if (insertError) {
+        console.error("DOCUMENT RECORD ERROR:", JSON.stringify(insertError, null, 2));
+        alert(insertError.message || "File uploaded, but document record could not be saved.");
+        return;
+      }
+
+      logAudit("Uploaded document", `${selectedEmployee.name} · ${file.name}`);
+      await fetchEmployeeDocuments();
+    } finally {
+      setUploadingDocument(false);
+    }
+  }
+
+  async function addPayEntry() {
+    if (!selectedEmployee || !newPayTitle.trim() || !newPayRate.trim() || !newPayDate) return;
+
+    const { error } = await supabase.from("employee_pay").insert([
       {
-        employee_id: employee.dbId,
-        label,
-        file_name: file.name,
-        file_type: file.type,
-        file_url: dataUrl,
-        uploaded_by: currentUser.name,
+        employee_id: Number(selectedEmployee.id),
+        effective_date: newPayDate,
+        title: newPayTitle.trim(),
+        rate: newPayRate.trim(),
+        tips_eligible: newTipsEligible,
+        entered_by: currentUser.name,
       },
     ]);
 
     if (error) {
-      console.error("ADD DOCUMENT ERROR:", error);
-      alert(error.message || "Could not upload document.");
+      console.error("ADD PAY ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not save pay entry.");
       return;
     }
 
-    logAudit("Uploaded document", employee.name);
-    await fetchDocuments();
+    logAudit("Added pay entry", `${selectedEmployee.name} · ${newPayTitle.trim()} · ${newPayRate.trim()}`);
+    setNewPayTitle("");
+    setNewPayRate("");
+    setNewPayDate(new Date().toISOString().slice(0, 10));
+    setNewTipsEligible("Yes");
+    await fetchEmployeePay();
   }
 
-  async function submitSixMonthReview(
-    employee: Employee,
-    scores: Record<string, number>,
-    photoFile: File | null
-  ) {
-    const total = scoreTotal(scores);
-    const reviewDate = new Date().toISOString().slice(0, 10);
-    const nextReviewDate = addMonthsToToday(6);
+  async function submitReview() {
+    if (!selectedEmployee) return;
 
-    const { error } = await supabase.from("employee_reviews").insert([
+    const total = Object.values(reviewScores).reduce((sum, v) => sum + v, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const nextReviewDue = addMonthsToToday(6);
+
+    const { error: reviewError } = await supabase.from("employee_reviews").insert([
       {
-        employee_id: employee.dbId,
-        review_date: reviewDate,
-        review_type: "6-month",
+        employee_id: Number(selectedEmployee.id),
+        review_date: today,
         manager_name: currentUser.name,
+        review_type: "6-month",
         total_score: total,
-        next_review_date: nextReviewDate,
+        customer_service: reviewScores["Customer Service"],
+        product_quality: reviewScores["Product Quality"],
+        food_safety: reviewScores["Food Safety"],
+        productivity: reviewScores["Productivity"],
+        communication: reviewScores["Communication"],
+        dependability: reviewScores["Dependability"],
+        job_knowledge: reviewScores["Job Knowledge"],
+        safety: reviewScores["Safety"],
       },
     ]);
 
-    if (error) {
-      console.error("ADD REVIEW ERROR:", error);
-      alert(error.message || "Could not save review.");
+    if (reviewError) {
+      console.error("SAVE REVIEW ERROR:", JSON.stringify(reviewError, null, 2));
+      alert(reviewError.message || "Could not save 6-month review.");
       return;
     }
 
-    const updateEmployeeError = await supabase
+    const { error: employeeError } = await supabase
       .from("employees")
-      .update({ next_review_due: nextReviewDate })
-      .eq("id", employee.dbId);
+      .update({ next_review_due: nextReviewDue })
+      .eq("id", Number(selectedEmployee.id));
 
-    if (updateEmployeeError.error) {
-      console.error("UPDATE NEXT REVIEW ERROR:", updateEmployeeError.error);
+    if (employeeError) {
+      console.error("UPDATE NEXT REVIEW ERROR:", JSON.stringify(employeeError, null, 2));
+      alert(employeeError.message || "Review saved, but next review due date was not updated.");
+      await fetchEmployeeReviews();
+      return;
     }
 
-    if (photoFile) {
-      await addDocument(employee, `6-Month Review Photo - ${reviewDate}`, photoFile);
-    }
+    logAudit(`Completed 6-month review (${total}/32)`, selectedEmployee.name);
 
-    logAudit(`Completed 6-month review (${total}/32)`, employee.name);
-    await fetchReviews();
-    await fetchEmployees();
+    setReviewScores({
+      "Customer Service": 0,
+      "Product Quality": 0,
+      "Food Safety": 0,
+      "Productivity": 0,
+      "Communication": 0,
+      "Dependability": 0,
+      "Job Knowledge": 0,
+      "Safety": 0,
+    });
+
+    await Promise.all([fetchEmployeeReviews(), fetchEmployees()]);
   }
 
-  async function terminateEmployee(employee: Employee, reason: string) {
+  async function terminateEmployee() {
+    if (!selectedEmployee || !terminationReason.trim()) return;
+
     const today = new Date().toISOString().slice(0, 10);
 
     const { error } = await supabase
       .from("employees")
       .update({
         terminated: true,
-        termination_reason: reason,
+        termination_reason: terminationReason.trim(),
         termination_date: today,
       })
-      .eq("id", employee.dbId);
+      .eq("id", Number(selectedEmployee.id));
 
     if (error) {
-      console.error("TERMINATE ERROR:", error);
+      console.error("TERMINATE EMPLOYEE ERROR:", JSON.stringify(error, null, 2));
       alert(error.message || "Could not terminate employee.");
       return;
     }
 
-    logAudit("Submitted termination", employee.name);
-    await fetchEmployees();
+    logAudit("Terminated employee", selectedEmployee.name);
+    setTerminationReason("");
     setSelectedEmployeeId(null);
+    await fetchEmployees();
   }
 
   if (loading) {
@@ -880,35 +1255,586 @@ export default function Page() {
   }
 
   if (selectedEmployee) {
+    const tabs = [
+      { id: "overview", label: "Overview", icon: <ClipboardCheck size={14} /> },
+      { id: "pay", label: "Pay & Reviews", icon: <DollarSign size={14} /> },
+      { id: "checkins", label: "Monthly Check-in", icon: <Bell size={14} /> },
+      { id: "review", label: "6-Month Review", icon: <Shield size={14} /> },
+      { id: "notes", label: "Notes & Goals", icon: <FileText size={14} /> },
+      { id: "documents", label: "Documents", icon: <FileText size={14} /> },
+      { id: "attendance", label: "Attendance", icon: <Clock3 size={14} /> },
+      { id: "term", label: "Termination", icon: <LogOut size={14} /> },
+    ] as const;
+
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900">
         <header className="bg-black text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="font-black text-xl tracking-tight">
-              BRENZ<span className="text-red-500">.</span>
-            </div>
-            <span className="text-stone-400 text-sm">Employee Portal</span>
+          <div className="text-2xl font-black tracking-tight">
+            BRENZ<span className="text-red-500">.</span>
           </div>
+          <div className="text-sm text-stone-300">Employee Portal</div>
         </header>
 
-        <main className="max-w-7xl mx-auto p-6">
-          <EmployeePacket
-            employee={selectedEmployee}
-            user={currentUser}
-            stores={stores}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onBack={() => setSelectedEmployeeId(null)}
-            onPatchEmployee={patchEmployee}
-            onAddNote={addNote}
-            onAddGoal={addGoal}
-            onAddCheckin={addCheckin}
-            onAddAttendance={addAttendance}
-            onAddDocument={addDocument}
-            onSubmitSixMonthReview={submitSixMonthReview}
-            onTerminate={terminateEmployee}
-            onDeleteEmployee={deleteEmployee}
-          />
+        <main className="max-w-6xl mx-auto p-6">
+          <button
+            onClick={() => {
+              setSelectedEmployeeId(null);
+              setExpandedCheckinId(null);
+              setExpandedReviewId(null);
+            }}
+            className="flex items-center gap-1 text-sm text-stone-600 hover:text-black mb-4"
+          >
+            <ChevronLeft size={16} />
+            Back to dashboard
+          </button>
+
+          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-black text-white p-6">
+              <div className="text-xs tracking-widest text-stone-400 mb-1">EMPLOYEE PACKET</div>
+              <h1 className="text-3xl font-bold">{selectedEmployee.name}</h1>
+              <p className="text-stone-300 mt-1">
+                {selectedEmployee.title} · Started {selectedEmployee.startDate || "—"} ·{" "}
+                {storeName(selectedEmployee.storeId)}
+              </p>
+            </div>
+
+            <div className="border-b border-stone-200 px-4 pt-3 flex gap-2 overflow-x-auto">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3 py-2 text-sm rounded-t flex items-center gap-1.5 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "bg-stone-100 border-b-2 border-red-500 font-semibold"
+                      : "text-stone-600 hover:bg-stone-50"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-6">
+              {activeTab === "overview" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InfoCard label="Assigned Trainer" value={selectedEmployee.assignedTrainer || "—"} />
+                  <InfoCard label="Next Review Due" value={selectedEmployee.nextReviewDue || "—"} />
+                  <InfoCard label="Store" value={storeName(selectedEmployee.storeId)} />
+                  <InfoCard label="Title" value={selectedEmployee.title || "—"} />
+                  <ToggleCard
+                    label="Insurance Approved"
+                    value={selectedEmployee.insuranceApproved}
+                    onToggle={() =>
+                      updateEmployeeLocal(selectedEmployee.id, {
+                        insuranceApproved: !selectedEmployee.insuranceApproved,
+                      })
+                    }
+                  />
+                  <ToggleCard
+                    label="ADP Signed Up"
+                    value={selectedEmployee.adpSignedUp}
+                    onToggle={() =>
+                      updateEmployeeLocal(selectedEmployee.id, {
+                        adpSignedUp: !selectedEmployee.adpSignedUp,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {activeTab === "pay" && (
+                <div className="space-y-6">
+                  <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
+                    <h3 className="font-semibold mb-3">Add Pay Entry</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <input
+                        value={newPayTitle}
+                        onChange={(e) => setNewPayTitle(e.target.value)}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="Title"
+                      />
+                      <input
+                        value={newPayRate}
+                        onChange={(e) => setNewPayRate(e.target.value)}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="Rate"
+                      />
+                      <input
+                        type="date"
+                        value={newPayDate}
+                        onChange={(e) => setNewPayDate(e.target.value)}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      />
+                      <select
+                        value={newTipsEligible}
+                        onChange={(e) => setNewTipsEligible(e.target.value as "Yes" | "No")}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="Yes">Tips Eligible: Yes</option>
+                        <option value="No">Tips Eligible: No</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={addPayEntry}
+                      className="mt-3 bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                    >
+                      Save Pay Entry
+                    </button>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Pay History</h3>
+                    <div className="overflow-x-auto border border-stone-200 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-stone-100">
+                          <tr>
+                            <th className="text-left p-2">Title</th>
+                            <th className="text-left p-2">Rate</th>
+                            <th className="text-left p-2">Date</th>
+                            <th className="text-left p-2">Tips Eligible</th>
+                            <th className="text-left p-2">Entered By</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedEmployee.pay.length === 0 ? (
+                            <tr>
+                              <td className="p-2 text-stone-500" colSpan={5}>
+                                No pay history yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            selectedEmployee.pay.map((p) => (
+                              <tr key={p.id} className="border-t border-stone-200">
+                                <td className="p-2">{p.title}</td>
+                                <td className="p-2">{p.rate}</td>
+                                <td className="p-2">{p.date}</td>
+                                <td className="p-2">{p.tipsEligible}</td>
+                                <td className="p-2">{p.enteredBy || "—"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Review History</h3>
+                    {selectedEmployee.reviewHistory.length === 0 ? (
+                      <p className="text-sm text-stone-500">No reviews on file.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedEmployee.reviewHistory.map((r) => {
+                          const expanded = expandedReviewId === r.id;
+                          return (
+                            <div key={r.id} className="border border-stone-200 rounded-lg p-4">
+                              <div className="flex items-center justify-between gap-4">
+                                <div>
+                                  <div className="font-semibold">{r.date}</div>
+                                  <div className="text-sm text-stone-500">
+                                    {r.type} · {r.manager}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-lg font-bold">{r.total}/32</div>
+                                  <button
+                                    onClick={() =>
+                                      setExpandedReviewId(expanded ? null : r.id)
+                                    }
+                                    className="text-sm text-stone-600 hover:text-black flex items-center gap-1"
+                                  >
+                                    {expanded ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    {expanded ? "Hide" : "View"}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {expanded && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
+                                  <MiniScore label="Customer Service" value={r.scores.customerService} />
+                                  <MiniScore label="Product Quality" value={r.scores.productQuality} />
+                                  <MiniScore label="Food Safety" value={r.scores.foodSafety} />
+                                  <MiniScore label="Productivity" value={r.scores.productivity} />
+                                  <MiniScore label="Communication" value={r.scores.communication} />
+                                  <MiniScore label="Dependability" value={r.scores.dependability} />
+                                  <MiniScore label="Job Knowledge" value={r.scores.jobKnowledge} />
+                                  <MiniScore label="Safety" value={r.scores.safety} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "checkins" && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-2xl mb-2">New Check-in</h3>
+                    <p className="text-sm text-stone-600 mb-4">
+                      Rate adherence to core values. (+) most of the time, (+/-) sometimes, (-) rarely.
+                    </p>
+
+                    <div className="space-y-2">
+                      {MONTHLY_CHECKIN_ITEMS.map((item) => {
+                        const value = checkinRatings[item.key];
+                        return (
+                          <div
+                            key={item.key}
+                            className="border border-stone-200 rounded-lg px-3 py-2 flex items-center justify-between gap-4"
+                          >
+                            <div className="font-medium">{item.label}</div>
+
+                            <div className="flex gap-1">
+                              {(["+", "+/-", "-"] as CheckinRating[]).map((option) => (
+                                <button
+                                  key={option}
+                                  onClick={() =>
+                                    setCheckinRatings((prev) => ({
+                                      ...prev,
+                                      [item.key]: option,
+                                    }))
+                                  }
+                                  className={`min-w-[38px] h-9 px-3 rounded-md text-sm border ${
+                                    value === option
+                                      ? "bg-black text-white border-black"
+                                      : "bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200"
+                                  }`}
+                                >
+                                  {option}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={addCheckin}
+                      className="mt-4 bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                    >
+                      Save Check-in
+                    </button>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-xl mb-3">Check-in History</h3>
+
+                    {selectedEmployee.checkins.length === 0 ? (
+                      <p className="text-sm text-stone-500">No check-ins yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedEmployee.checkins.map((checkin) => {
+                          const expanded = expandedCheckinId === checkin.id;
+                          return (
+                            <div key={checkin.id} className="border border-stone-200 rounded-lg p-4">
+                              <div className="flex items-center justify-between gap-4">
+                                <div>
+                                  <div className="font-semibold">{checkin.date}</div>
+                                  <div className="text-sm text-stone-500">{checkin.manager}</div>
+                                </div>
+                                <button
+                                  onClick={() =>
+                                    setExpandedCheckinId(expanded ? null : checkin.id)
+                                  }
+                                  className="text-sm text-stone-600 hover:text-black flex items-center gap-1"
+                                >
+                                  {expanded ? <EyeOff size={15} /> : <Eye size={15} />}
+                                  {expanded ? "Hide" : "View"}
+                                </button>
+                              </div>
+
+                              {expanded && (
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                  <MiniRating label="Team Player" value={checkin.ratings.teamPlayer} />
+                                  <MiniRating label="Customer Focus" value={checkin.ratings.customerFocus} />
+                                  <MiniRating label="Quality Focus" value={checkin.ratings.qualityFocus} />
+                                  <MiniRating label="Integrity" value={checkin.ratings.integrity} />
+                                  <MiniRating label="Reliability" value={checkin.ratings.reliability} />
+                                  <MiniRating label="Upbeat/Friendly" value={checkin.ratings.upbeatFriendly} />
+                                  <MiniRating label="Takes Initiative" value={checkin.ratings.takesInitiative} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "review" && (
+                <div className="space-y-4">
+                  <p className="text-sm text-stone-600">
+                    Score each category from 1 to 4. Total possible score: 32.
+                  </p>
+
+                  {Object.keys(reviewScores).map((category) => (
+                    <div
+                      key={category}
+                      className="border border-stone-200 rounded-lg p-3 flex items-center justify-between gap-4"
+                    >
+                      <span className="font-medium">{category}</span>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() =>
+                              setReviewScores((prev) => ({ ...prev, [category]: n }))
+                            }
+                            className={`w-9 h-9 rounded text-sm font-semibold ${
+                              reviewScores[category] === n
+                                ? "bg-black text-white"
+                                : "bg-stone-100 hover:bg-stone-200"
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="bg-stone-100 rounded-lg p-4 flex items-center justify-between">
+                    <span className="font-semibold">Total</span>
+                    <span className="text-2xl font-bold">
+                      {Object.values(reviewScores).reduce((sum, v) => sum + v, 0)} / 32
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={submitReview}
+                    className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                  >
+                    Submit 6-Month Review
+                  </button>
+                </div>
+              )}
+
+              {activeTab === "notes" && (
+                <div className="space-y-8">
+                  <section className="space-y-3">
+                    <h3 className="font-semibold">Add Note</h3>
+                    <textarea
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      rows={4}
+                      className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Add coaching note, follow-up, or development note..."
+                    />
+                    <button
+                      onClick={addNote}
+                      className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                    >
+                      Save Note
+                    </button>
+
+                    <div className="space-y-2">
+                      {selectedEmployee.notes.length === 0 ? (
+                        <p className="text-sm text-stone-500">No notes yet.</p>
+                      ) : (
+                        selectedEmployee.notes.map((note, i) => (
+                          <div key={i} className="border border-stone-200 rounded-lg p-3">
+                            <div className="text-xs text-stone-500 mb-1">
+                              {note.date} · {note.manager}
+                            </div>
+                            <div className="text-sm">{note.text}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="font-semibold">Future Goals & Development</h3>
+                    <input
+                      value={newGoal}
+                      onChange={(e) => setNewGoal(e.target.value)}
+                      className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Employee goal"
+                    />
+                    <textarea
+                      value={newGoalSupport}
+                      onChange={(e) => setNewGoalSupport(e.target.value)}
+                      rows={3}
+                      className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="How are you helping them get there?"
+                    />
+                    <button
+                      onClick={addGoal}
+                      className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                    >
+                      Save Goal
+                    </button>
+
+                    <div className="space-y-2">
+                      {selectedEmployee.goals.length === 0 ? (
+                        <p className="text-sm text-stone-500">No goals yet.</p>
+                      ) : (
+                        selectedEmployee.goals.map((goal) => (
+                          <div key={goal.id} className="border border-stone-200 rounded-lg p-3">
+                            <div className="font-medium">{goal.goal}</div>
+                            <div className="text-sm text-stone-600 mt-1">{goal.support}</div>
+                            <div className="text-xs text-stone-500 mt-2">
+                              {goal.date} · {goal.manager}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {activeTab === "documents" && (
+                <div className="space-y-4">
+                  <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
+                    <h3 className="font-semibold mb-3">Upload Document</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm text-stone-600 block mb-1">Document Date</label>
+                        <input
+                          type="date"
+                          value={documentDate}
+                          onChange={(e) => setDocumentDate(e.target.value)}
+                          className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm text-stone-600 block mb-1">Choose File</label>
+                        <input
+                          type="file"
+                          onChange={(e) => uploadDocument(e.target.files?.[0] ?? null)}
+                          className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm bg-white"
+                          disabled={uploadingDocument}
+                        />
+                      </div>
+                    </div>
+
+                    {uploadingDocument && (
+                      <div className="text-sm text-stone-500 mt-3">Uploading document...</div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedEmployee.documents.length === 0 ? (
+                      <p className="text-sm text-stone-500">No documents on file.</p>
+                    ) : (
+                      selectedEmployee.documents.map((doc) => (
+                        <div key={doc.id} className="border border-stone-200 rounded-lg p-3">
+                          <div className="font-medium">{doc.name}</div>
+                          <div className="text-xs text-stone-500 mt-1">
+                            {doc.date} · {doc.uploadedBy}
+                          </div>
+                          {doc.publicUrl && (
+                            <a
+                              href={doc.publicUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mt-2"
+                            >
+                              <Upload size={14} />
+                              Open Document
+                            </a>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "attendance" && (
+                <div className="space-y-4">
+                  <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
+                    <h3 className="font-semibold mb-3">Log Attendance Issue</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <input
+                        type="date"
+                        value={attendanceDate}
+                        onChange={(e) => setAttendanceDate(e.target.value)}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      />
+
+                      <select
+                        value={attendanceType}
+                        onChange={(e) => setAttendanceType(e.target.value)}
+                        className="border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option>Late</option>
+                        <option>Call Off</option>
+                        <option>No Call / No Show</option>
+                        <option>Left Early</option>
+                      </select>
+
+                      <input
+                        value={attendanceReason}
+                        onChange={(e) => setAttendanceReason(e.target.value)}
+                        className="md:col-span-2 border border-stone-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="Reason"
+                      />
+                    </div>
+
+                    <button
+                      onClick={addAttendance}
+                      className="mt-3 bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+                    >
+                      Save Attendance Entry
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedEmployee.attendance.length === 0 ? (
+                      <p className="text-sm text-stone-500">No attendance issues logged.</p>
+                    ) : (
+                      selectedEmployee.attendance.map((a) => (
+                        <div key={a.id} className="border border-stone-200 rounded-lg p-3">
+                          <div className="font-medium">{a.type}</div>
+                          <div className="text-sm text-stone-600">
+                            {a.date} · {a.reason}
+                          </div>
+                          <div className="text-xs text-stone-400 mt-1">Logged by {a.createdBy}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "term" && (
+                <div className="space-y-4">
+                  <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-red-700 mb-2">Termination</h3>
+                    <p className="text-sm text-red-700 mb-3">
+                      This marks the employee as terminated and removes them from the active dashboard.
+                    </p>
+                    <textarea
+                      value={terminationReason}
+                      onChange={(e) => setTerminationReason(e.target.value)}
+                      rows={4}
+                      className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm bg-white"
+                      placeholder="Reason for termination"
+                    />
+                    <button
+                      onClick={terminateEmployee}
+                      className="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700"
+                    >
+                      Terminate Employee
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -917,21 +1843,15 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
       <header className="bg-black text-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="font-black text-xl tracking-tight">
-            BRENZ<span className="text-red-500">.</span>
-          </div>
-          <span className="text-stone-400 text-sm">Employee Portal</span>
+        <div className="text-2xl font-black tracking-tight">
+          BRENZ<span className="text-red-500">.</span>
         </div>
 
         <div className="flex items-center gap-3">
           <select
             value={currentUserId}
-            onChange={(e) => {
-              setCurrentUserId(e.target.value);
-              setSelectedEmployeeId(null);
-            }}
-            className="bg-stone-800 text-white text-sm px-3 py-1.5 rounded border border-stone-700"
+            onChange={(e) => setCurrentUserId(e.target.value)}
+            className="bg-stone-800 text-white text-sm px-3 py-2 rounded border border-stone-700"
           >
             {dynamicUsers.map((u) => (
               <option key={u.id} value={u.id}>
@@ -940,13 +1860,8 @@ export default function Page() {
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs bg-stone-800 px-2 py-1 rounded">
-            {currentUser.role === "owner" ? (
-              <Shield size={14} className="text-amber-400" />
-            ) : (
-              <Store size={14} className="text-green-400" />
-            )}
-            <span className="uppercase tracking-wide">{currentUser.role}</span>
+          <div className="text-xs uppercase tracking-wide bg-stone-800 px-2 py-1 rounded">
+            {currentUser.role}
           </div>
         </div>
       </header>
@@ -956,10 +1871,50 @@ export default function Page() {
           <h1 className="text-3xl font-bold">Welcome back, {currentUser.name.split(" ")[0]}</h1>
           <p className="text-stone-600 mt-1">
             {currentUser.role === "owner"
-              ? "You're viewing all stores."
-              : "You're viewing your store only."}
+              ? "You are viewing all stores."
+              : "You are viewing your assigned store only."}
           </p>
         </div>
+
+        {(overdueReviews.length > 0 || checkinsOverdue.length > 0 || attendanceAlerts.length > 0) && (
+          <section className="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+            <h2 className="font-semibold text-lg flex items-center gap-2 mb-4 text-amber-900">
+              <AlertTriangle size={18} />
+              Alerts
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              {overdueReviews.length > 0 && (
+                <div>
+                  <div className="font-medium text-amber-900">Reviews overdue</div>
+                  <div className="text-amber-800">
+                    {overdueReviews.map((e) => `${e.name} (${storeName(e.storeId)})`).join(", ")}
+                  </div>
+                </div>
+              )}
+
+              {checkinsOverdue.length > 0 && (
+                <div>
+                  <div className="font-medium text-amber-900">Monthly check-ins overdue</div>
+                  <div className="text-amber-800">
+                    {checkinsOverdue.map((e) => `${e.name} (${storeName(e.storeId)})`).join(", ")}
+                  </div>
+                </div>
+              )}
+
+              {attendanceAlerts.length > 0 && (
+                <div>
+                  <div className="font-medium text-amber-900">
+                    Repeated attendance issues in the last 30 days
+                  </div>
+                  <div className="text-amber-800">
+                    {attendanceAlerts.map((e) => `${e.name} (${storeName(e.storeId)})`).join(", ")}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         <div className="flex flex-wrap gap-3">
           <button
@@ -999,1015 +1954,191 @@ export default function Page() {
           )}
         </div>
 
-        <Dashboard
-          user={currentUser}
-          stores={stores}
-          visibleEmployees={visibleEmployees}
-          allEmployees={employees}
-          managers={managers}
-          audit={audit}
-          onOpenEmployee={(id) => {
-            setSelectedEmployeeId(id);
-            setActiveTab("overview");
-          }}
-        />
-      </main>
-    </div>
-  );
-}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <KpiCard icon={<Users size={18} />} label="Active Employees" value={visibleEmployees.length} />
+          <KpiCard
+            icon={<AlertTriangle size={18} />}
+            label="Reviews Overdue"
+            value={overdueReviews.length}
+            danger={overdueReviews.length > 0}
+          />
+          <KpiCard
+            icon={<Bell size={18} />}
+            label="Check-ins Overdue"
+            value={checkinsOverdue.length}
+            danger={checkinsOverdue.length > 0}
+          />
+          <KpiCard
+            icon={<Store size={18} />}
+            label="Stores Visible"
+            value={currentUser.role === "owner" ? stores.length : 1}
+          />
+        </div>
 
-function Dashboard({
-  user,
-  stores,
-  visibleEmployees,
-  allEmployees,
-  managers,
-  audit,
-  onOpenEmployee,
-}: {
-  user: User;
-  stores: StoreRow[];
-  visibleEmployees: Employee[];
-  allEmployees: Employee[];
-  managers: ManagerRow[];
-  audit: AuditEntry[];
-  onOpenEmployee: (id: string) => void;
-}) {
-  const overdueReviews = visibleEmployees.filter((e) => e.nextReviewDue && isOverdue(e.nextReviewDue));
-  const checkinsOverdue = visibleEmployees.filter((e) => {
-    const last = [...e.checkins].sort((a, b) => b.date.localeCompare(a.date))[0];
-    if (!last) return true;
-    return daysSince(last.date) > 30;
-  });
+        {currentUser.role === "owner" && (
+          <>
+            <section className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
+              <h2 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                <ClipboardCheck size={18} />
+                Store Analytics
+              </h2>
 
-  const byStore = stores.map((s) => {
-    const list = allEmployees.filter((e) => e.storeId === toStoreKey(s.id) && !e.terminated);
-    const reviewScores = list.flatMap((e) => e.reviewHistory.map((r) => r.total));
-    const avgReview = reviewScores.length
-      ? (reviewScores.reduce((sum, n) => sum + n, 0) / reviewScores.length).toFixed(1)
-      : "—";
-
-    const checkinsThisMonth = list.reduce(
-      (sum, e) =>
-        sum +
-        e.checkins.filter((c) => {
-          return daysSince(c.date) <= 30;
-        }).length,
-      0
-    );
-
-    const attendanceIssues = list.reduce((sum, e) => sum + e.attendance.length, 0);
-
-    const checkinsOverdueCount = list.filter((e) => {
-      const last = [...e.checkins].sort((a, b) => b.date.localeCompare(a.date))[0];
-      if (!last) return true;
-      return daysSince(last.date) > 30;
-    }).length;
-
-    const reviewOverdueCount = list.filter((e) => e.nextReviewDue && isOverdue(e.nextReviewDue)).length;
-
-    return {
-      store: s,
-      total: list.length,
-      avgReview,
-      checkinsThisMonth,
-      attendanceIssues,
-      checkinsOverdueCount,
-      reviewOverdueCount,
-      managerCount: managers.filter((m) => m.store_id === s.id && (m.role || "").toLowerCase() !== "owner").length,
-    };
-  });
-
-  return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KpiCard icon={<Users size={18} />} label="Active Employees" value={visibleEmployees.length} />
-        <KpiCard
-          icon={<AlertTriangle size={18} />}
-          label="Reviews Overdue"
-          value={overdueReviews.length}
-          danger={overdueReviews.length > 0}
-        />
-        <KpiCard
-          icon={<Bell size={18} />}
-          label="Check-ins Overdue"
-          value={checkinsOverdue.length}
-          danger={checkinsOverdue.length > 0}
-        />
-        <KpiCard
-          icon={<Store size={18} />}
-          label="Stores Visible"
-          value={user.role === "owner" ? stores.length : 1}
-        />
-      </div>
-
-      {user.role === "owner" && (
-        <section className="bg-white border border-stone-200 rounded-lg p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <Store size={18} />
-              Store Analytics
-            </h2>
-            <span className="text-xs text-stone-500">Side-by-side comparison</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-stone-200">
-                  <th className="text-left p-3 text-stone-600 font-medium">Metric</th>
-                  {byStore.map((s) => (
-                    <th key={s.store.id} className="text-left p-3 font-semibold">
-                      {s.store.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <MetricRow label="Active Employees" values={byStore.map((s) => s.total)} />
-                <MetricRow label="Managers" values={byStore.map((s) => s.managerCount)} />
-                <MetricRow label="Reviews Overdue" values={byStore.map((s) => s.reviewOverdueCount)} redIf={(v) => v > 0} />
-                <MetricRow label="Check-ins Overdue" values={byStore.map((s) => s.checkinsOverdueCount)} redIf={(v) => v > 0} />
-                <MetricRow label="Check-ins Done (30d)" values={byStore.map((s) => s.checkinsThisMonth)} />
-                <MetricRow label="Avg Review Score" values={byStore.map((s) => `${s.avgReview}/32`)} />
-                <MetricRow label="Attendance Issues" values={byStore.map((s) => s.attendanceIssues)} redIf={(v) => v > 2} />
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {user.role === "owner" && (
-        <section className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            <ClipboardCheck size={18} />
-            Manager Compliance
-          </h2>
-          <table className="w-full text-sm border border-stone-200">
-            <thead className="bg-stone-100">
-              <tr>
-                <th className="text-left p-2">Employee</th>
-                <th className="text-left p-2">Store</th>
-                <th className="text-left p-2">Last Check-in</th>
-                <th className="text-left p-2">Last 6-Mo Review</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allEmployees
-                .filter((e) => !e.terminated)
-                .map((e) => {
-                  const lastCheckin = [...e.checkins].sort((a, b) => b.date.localeCompare(a.date))[0];
-                  const lastReview = [...e.reviewHistory].sort((a, b) => b.date.localeCompare(a.date))[0];
-                  const checkinOverdue = !lastCheckin || daysSince(lastCheckin.date) > 35;
-                  const reviewOverdue = !lastReview || daysSince(lastReview.date) > 200;
-
-                  return (
-                    <tr key={e.id} className="border-t border-stone-200">
-                      <td className="p-2 font-medium">{e.name}</td>
-                      <td className="p-2 text-stone-600">{stores.find((s) => toStoreKey(s.id) === e.storeId)?.name}</td>
-                      <td className={`p-2 ${checkinOverdue ? "text-red-600 font-semibold" : ""}`}>
-                        {lastCheckin ? `${lastCheckin.date} · ${lastCheckin.manager}` : "Never"}
-                      </td>
-                      <td className={`p-2 ${reviewOverdue ? "text-red-600 font-semibold" : ""}`}>
-                        {lastReview ? `${lastReview.date} · ${lastReview.manager} · ${lastReview.total}/32` : "Never"}
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {user.role === "owner" && (
-        <section className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            <FileText size={18} />
-            Audit Log
-          </h2>
-          <div className="space-y-2 text-sm">
-            {audit.slice(0, 10).map((a) => (
-              <div key={a.id} className="flex items-start gap-3 py-1.5 border-b border-stone-100 last:border-0">
-                <div className="text-stone-400 text-xs w-32 shrink-0">{a.ts}</div>
-                <div className="flex-1">
-                  <span className="font-medium">{a.user}</span>
-                  <span className="text-stone-600"> · {a.action} · </span>
-                  <span className="text-stone-800">{a.target}</span>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {ownerStoreRollup.map((store) => (
+                  <div key={store.id} className="border border-stone-200 rounded-lg p-4">
+                    <div className="font-semibold">{store.name}</div>
+                    <div className="text-sm text-stone-600 mt-1">Employees: {store.employees}</div>
+                    <div
+                      className={`text-sm mt-1 ${
+                        store.overdueReviews > 0 ? "text-red-600 font-semibold" : "text-stone-600"
+                      }`}
+                    >
+                      Reviews Overdue: {store.overdueReviews}
+                    </div>
+                    <div
+                      className={`text-sm mt-1 ${
+                        store.overdueCheckins > 0 ? "text-red-600 font-semibold" : "text-stone-600"
+                      }`}
+                    >
+                      Check-ins Overdue: {store.overdueCheckins}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </section>
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-lg flex items-center gap-2">
-            <Users size={18} />
+            <section className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
+              <h2 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                <Users size={18} />
+                Managers
+              </h2>
+
+              {managers.filter((m) => m.role === "manager").length === 0 ? (
+                <p className="text-sm text-stone-500">No managers found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {managers
+                    .filter((m) => m.role === "manager")
+                    .map((manager) => (
+                      <div
+                        key={manager.id}
+                        className="border border-stone-200 rounded-lg p-4 flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <div className="font-medium">{manager.name}</div>
+                          <div className="text-sm text-stone-500">
+                            {manager.email || "No email"} · {storeName(toStoreKey(manager.store_id))}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => editManager(manager)}
+                            className="bg-stone-100 hover:bg-stone-200 px-3 py-2 rounded text-sm flex items-center gap-1"
+                          >
+                            <Pencil size={14} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteManager(manager)}
+                            className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded text-sm flex items-center gap-1"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
+              <h2 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                <FileText size={18} />
+                Audit Log
+              </h2>
+              <div className="space-y-2 text-sm">
+                {audit.slice(0, 8).map((entry) => (
+                  <div key={entry.id} className="border-b border-stone-100 pb-2">
+                    <span className="font-medium">{entry.user}</span>
+                    <span className="text-stone-600"> · {entry.action} · </span>
+                    <span>{entry.target}</span>
+                    <div className="text-xs text-stone-400 mt-1">{entry.ts}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        <section className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
+          <h2 className="font-semibold text-lg flex items-center gap-2 mb-4">
+            <FileText size={18} />
             Employees
           </h2>
-        </div>
 
-        <div className="divide-y divide-stone-200">
-          {visibleEmployees.map((e) => {
-            const lastCheckin = [...e.checkins].sort((a, b) => b.date.localeCompare(a.date))[0];
-
-            return (
-              <button
-                key={e.id}
-                onClick={() => onOpenEmployee(e.id)}
-                className="w-full flex items-center justify-between py-3 hover:bg-stone-50 px-2 rounded text-left"
+          <div className="divide-y divide-stone-200">
+            {visibleEmployees.map((employee) => (
+              <div
+                key={employee.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedEmployeeId(employee.id);
+                  setActiveTab("overview");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setSelectedEmployeeId(employee.id);
+                    setActiveTab("overview");
+                  }
+                }}
+                className="w-full text-left py-4 hover:bg-stone-50 px-2 rounded-lg cursor-pointer"
               >
-                <div>
-                  <div className="font-medium">{e.name}</div>
-                  <div className="text-xs text-stone-500">
-                    {e.title} · {stores.find((s) => toStoreKey(s.id) === e.storeId)?.name}
-                  </div>
-                </div>
-
-                <div className="text-right text-xs text-stone-500">
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    Next review:{" "}
-                    <span className={isOverdue(e.nextReviewDue) ? "text-red-600 font-semibold" : ""}>
-                      {e.nextReviewDue || "—"}
-                    </span>
-                  </div>
-                  <div className="mt-0.5">
-                    Last check-in:{" "}
-                    <span className={!lastCheckin || daysSince(lastCheckin.date) > 30 ? "text-red-600 font-semibold" : ""}>
-                      {lastCheckin?.date || "never"}
-                    </span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-
-          {visibleEmployees.length === 0 && (
-            <div className="py-6 text-sm text-stone-500">No employees found.</div>
-          )}
-        </div>
-      </section>
-    </>
-  );
-}
-
-function EmployeePacket({
-  employee,
-  user,
-  stores,
-  activeTab,
-  setActiveTab,
-  onBack,
-  onPatchEmployee,
-  onAddNote,
-  onAddGoal,
-  onAddCheckin,
-  onAddAttendance,
-  onAddDocument,
-  onSubmitSixMonthReview,
-  onTerminate,
-  onDeleteEmployee,
-}: {
-  employee: Employee;
-  user: User;
-  stores: StoreRow[];
-  activeTab: "overview" | "pay" | "checkin" | "review6" | "notes" | "documents" | "attendance" | "term";
-  setActiveTab: (
-    tab: "overview" | "pay" | "checkin" | "review6" | "notes" | "documents" | "attendance" | "term"
-  ) => void;
-  onBack: () => void;
-  onPatchEmployee: (dbId: number, patch: Partial<EmployeeRow>) => Promise<void>;
-  onAddNote: (employee: Employee, text: string) => Promise<void>;
-  onAddGoal: (employee: Employee, goalText: string, supportText: string) => Promise<void>;
-  onAddCheckin: (employee: Employee, ratings: Record<string, string>, notes: string) => Promise<void>;
-  onAddAttendance: (
-    employee: Employee,
-    incidentDate: string,
-    incidentType: string,
-    reason: string,
-    writeUp: boolean
-  ) => Promise<void>;
-  onAddDocument: (employee: Employee, label: string, file: File) => Promise<void>;
-  onSubmitSixMonthReview: (
-    employee: Employee,
-    scores: Record<string, number>,
-    photoFile: File | null
-  ) => Promise<void>;
-  onTerminate: (employee: Employee, reason: string) => Promise<void>;
-  onDeleteEmployee: (employee: Employee) => Promise<void>;
-}) {
-  const tabs = [
-    { id: "overview", label: "Overview", icon: <UserCheck size={14} /> },
-    { id: "pay", label: "Pay & Reviews", icon: <ClipboardCheck size={14} /> },
-    { id: "checkin", label: "Monthly Check-in", icon: <Bell size={14} /> },
-    { id: "review6", label: "6-Month Review", icon: <ClipboardCheck size={14} /> },
-    { id: "notes", label: "Notes & Goals", icon: <Target size={14} /> },
-    { id: "documents", label: "Documents", icon: <Paperclip size={14} /> },
-    { id: "attendance", label: "Attendance", icon: <Clock3 size={14} /> },
-    { id: "term", label: "Termination", icon: <LogOut size={14} /> },
-  ] as const;
-
-  return (
-    <div>
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-stone-600 hover:text-black mb-3">
-        <ChevronLeft size={16} />
-        Back to dashboard
-      </button>
-
-      <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-        <div className="bg-black text-white p-6">
-          <div className="text-xs tracking-widest text-stone-400 mb-1">EMPLOYEE PACKET</div>
-          <div className="text-3xl font-bold">{employee.name}</div>
-          <div className="text-stone-300 mt-1">
-            {employee.title} · Started {employee.startDate || "—"} ·{" "}
-            {stores.find((s) => toStoreKey(s.id) === employee.storeId)?.name}
-          </div>
-        </div>
-
-        <div className="flex gap-1 border-b border-stone-200 px-4 pt-3 overflow-x-auto">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-t whitespace-nowrap ${
-                activeTab === t.id
-                  ? "bg-stone-100 font-semibold border-b-2 border-red-500"
-                  : "text-stone-600 hover:bg-stone-50"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-6">
-          {activeTab === "overview" && (
-            <OverviewTab employee={employee} onPatchEmployee={onPatchEmployee} />
-          )}
-
-          {activeTab === "pay" && <PayTab employee={employee} />}
-
-          {activeTab === "checkin" && (
-            <CheckinTab employee={employee} user={user} onAddCheckin={onAddCheckin} />
-          )}
-
-          {activeTab === "review6" && (
-            <SixMonthReviewTab
-              employee={employee}
-              user={user}
-              onSubmitSixMonthReview={onSubmitSixMonthReview}
-            />
-          )}
-
-          {activeTab === "notes" && (
-            <NotesGoalsTab employee={employee} user={user} onAddNote={onAddNote} onAddGoal={onAddGoal} />
-          )}
-
-          {activeTab === "documents" && (
-            <DocumentsTab employee={employee} user={user} onAddDocument={onAddDocument} />
-          )}
-
-          {activeTab === "attendance" && (
-            <AttendanceTab employee={employee} onAddAttendance={onAddAttendance} />
-          )}
-
-          {activeTab === "term" && (
-            <TerminationTab employee={employee} onTerminate={onTerminate} onDeleteEmployee={onDeleteEmployee} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OverviewTab({
-  employee,
-  onPatchEmployee,
-}: {
-  employee: Employee;
-  onPatchEmployee: (dbId: number, patch: Partial<EmployeeRow>) => Promise<void>;
-}) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <EditableField
-        label="Assigned Trainer"
-        value={employee.assignedTrainer}
-        onSave={(value) => onPatchEmployee(employee.dbId, { assigned_trainer: value })}
-      />
-      <Field label="Start Date" value={employee.startDate || "—"} />
-      <Field label="Next Review Due" value={employee.nextReviewDue || "—"} />
-      <Field label="Title" value={employee.title} />
-      <ToggleField
-        label="Insurance Approved"
-        value={employee.insuranceApproved}
-        onChange={(value) => onPatchEmployee(employee.dbId, { insurance_approved: value })}
-      />
-      <ToggleField
-        label="ADP Signed Up"
-        value={employee.adpSignedUp}
-        onChange={(value) => onPatchEmployee(employee.dbId, { adp_signed_up: value })}
-      />
-    </div>
-  );
-}
-
-function PayTab({ employee }: { employee: Employee }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold mb-2">Review History</h3>
-        {employee.reviewHistory.length === 0 ? (
-          <p className="text-stone-500 text-sm">No reviews on file.</p>
-        ) : (
-          <table className="w-full text-sm border border-stone-200">
-            <thead className="bg-stone-100">
-              <tr>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Type</th>
-                <th className="text-left p-2">Manager</th>
-                <th className="text-left p-2">Score</th>
-                <th className="text-left p-2">Next Review</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...employee.reviewHistory]
-                .sort((a, b) => b.date.localeCompare(a.date))
-                .map((r) => (
-                  <tr key={r.id} className="border-t border-stone-200">
-                    <td className="p-2">{r.date}</td>
-                    <td className="p-2">{r.type}</td>
-                    <td className="p-2">{r.manager}</td>
-                    <td className="p-2">{r.total}/32</td>
-                    <td className="p-2">{r.nextReviewDate || "—"}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CheckinTab({
-  employee,
-  user,
-  onAddCheckin,
-}: {
-  employee: Employee;
-  user: User;
-  onAddCheckin: (employee: Employee, ratings: Record<string, string>, notes: string) => Promise<void>;
-}) {
-  const [ratings, setRatings] = useState<Record<string, string>>(
-    Object.fromEntries(CHECKIN_CATEGORIES.map((c) => [c, ""]))
-  );
-  const [notes, setNotes] = useState("");
-
-  async function save() {
-    await onAddCheckin(employee, ratings, notes);
-    setRatings(Object.fromEntries(CHECKIN_CATEGORIES.map((c) => [c, ""])));
-    setNotes("");
-  }
-
-  const history = [...employee.checkins].sort((a, b) => b.date.localeCompare(a.date));
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold mb-2">New Check-in</h3>
-        <p className="text-sm text-stone-600 mb-3">
-          Rate adherence to core values. (+) most of the time, (+/-) sometimes, (-) rarely.
-        </p>
-
-        <div className="space-y-2 mb-4">
-          {CHECKIN_CATEGORIES.map((label) => (
-            <div key={label} className="flex items-center justify-between border border-stone-200 rounded p-2">
-              <span>{label}</span>
-              <div className="flex gap-1">
-                {["+", "+/-", "-"].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => setRatings((prev) => ({ ...prev, [label]: value }))}
-                    className={`px-3 py-1 text-sm rounded ${
-                      ratings[label] === value ? "bg-black text-white" : "bg-stone-100 hover:bg-stone-200"
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          placeholder="Optional manager notes..."
-          className="w-full border border-stone-300 rounded px-3 py-2 text-sm mb-3"
-        />
-
-        <button onClick={save} className="bg-black text-white px-4 py-2 rounded hover:bg-stone-800">
-          Save Check-in
-        </button>
-      </div>
-
-      <div>
-        <h3 className="font-semibold mb-2">Check-in History</h3>
-        {history.length === 0 ? (
-          <p className="text-stone-500 text-sm">No check-ins recorded yet.</p>
-        ) : (
-          <table className="w-full text-sm border border-stone-200">
-            <thead className="bg-stone-100">
-              <tr>
-                <th className="text-left p-2">Date Completed</th>
-                <th className="text-left p-2">Manager</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h) => (
-                <tr key={h.id} className="border-t border-stone-200">
-                  <td className="p-2 font-medium">{h.date}</td>
-                  <td className="p-2">{h.manager || user.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SixMonthReviewTab({
-  employee,
-  user,
-  onSubmitSixMonthReview,
-}: {
-  employee: Employee;
-  user: User;
-  onSubmitSixMonthReview: (
-    employee: Employee,
-    scores: Record<string, number>,
-    photoFile: File | null
-  ) => Promise<void>;
-}) {
-  const [scores, setScores] = useState<Record<string, number>>(
-    Object.fromEntries(REVIEW_CATEGORIES.map((c) => [c, 0]))
-  );
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-
-  const total = scoreTotal(scores);
-
-  async function submit() {
-    await onSubmitSixMonthReview(employee, scores, photoFile);
-    setScores(Object.fromEntries(REVIEW_CATEGORIES.map((c) => [c, 0])));
-    setPhotoFile(null);
-  }
-
-  const reviewPhotos = employee.documents.filter((d) =>
-    d.label.toLowerCase().includes("6-month review photo")
-  );
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm text-stone-600 mb-3">
-          Hourly Performance Appraisal. 1 = Unacceptable, 2 = Meets, 3 = Exceeds, 4 = Outstanding.
-        </p>
-
-        <div className="space-y-2">
-          {REVIEW_CATEGORIES.map((category) => (
-            <div key={category} className="flex items-center justify-between border border-stone-200 rounded p-3">
-              <span className="font-medium">{category}</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setScores((prev) => ({ ...prev, [category]: n }))}
-                    className={`w-9 h-9 rounded text-sm font-semibold ${
-                      scores[category] === n ? "bg-black text-white" : "bg-stone-100 hover:bg-stone-200"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between bg-stone-100 p-4 rounded">
-          <div className="font-semibold">Overall Rating</div>
-          <div className="text-2xl font-bold">{total} / 32</div>
-        </div>
-
-        <div className="mt-4 border border-stone-200 rounded p-4 bg-stone-50">
-          <div className="font-semibold mb-2">Upload photo of signed 6-month review</div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-            className="text-sm"
-          />
-          {photoFile && <div className="text-xs text-stone-600 mt-2">Selected: {photoFile.name}</div>}
-        </div>
-
-        <button
-          onClick={submit}
-          className="mt-4 bg-black text-white px-4 py-2 rounded hover:bg-stone-800"
-        >
-          Submit Review
-        </button>
-      </div>
-
-      <div>
-        <h3 className="font-semibold mb-2">Review History</h3>
-        {employee.reviewHistory.length === 0 ? (
-          <p className="text-stone-500 text-sm">No reviews on file.</p>
-        ) : (
-          <table className="w-full text-sm border border-stone-200">
-            <thead className="bg-stone-100">
-              <tr>
-                <th className="text-left p-2">Date</th>
-                <th className="text-left p-2">Manager</th>
-                <th className="text-left p-2">Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...employee.reviewHistory]
-                .sort((a, b) => b.date.localeCompare(a.date))
-                .map((r) => (
-                  <tr key={r.id} className="border-t border-stone-200">
-                    <td className="p-2 font-medium">{r.date}</td>
-                    <td className="p-2">{r.manager}</td>
-                    <td className="p-2">{r.total}/32</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div>
-        <h3 className="font-semibold mb-2">Uploaded Review Photos</h3>
-        {reviewPhotos.length === 0 ? (
-          <p className="text-stone-500 text-sm">No review photos uploaded yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {reviewPhotos.map((doc) => (
-              <a
-                key={doc.id}
-                href={doc.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="border border-stone-200 rounded overflow-hidden bg-white hover:bg-stone-50"
-              >
-                {doc.fileType.startsWith("image/") ? (
-                  <img src={doc.fileUrl} alt={doc.label} className="w-full aspect-square object-cover" />
-                ) : (
-                  <div className="w-full aspect-square flex items-center justify-center text-stone-500">
-                    <FileText size={30} />
-                  </div>
-                )}
-                <div className="p-2 text-xs">
-                  <div className="font-medium truncate">{doc.label}</div>
-                  <div className="text-stone-500">{doc.date}</div>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function NotesGoalsTab({
-  employee,
-  user,
-  onAddNote,
-  onAddGoal,
-}: {
-  employee: Employee;
-  user: User;
-  onAddNote: (employee: Employee, text: string) => Promise<void>;
-  onAddGoal: (employee: Employee, goalText: string, supportText: string) => Promise<void>;
-}) {
-  const [note, setNote] = useState("");
-  const [goal, setGoal] = useState("");
-  const [support, setSupport] = useState("");
-
-  return (
-    <div className="space-y-8">
-      <section>
-        <h3 className="font-semibold text-lg mb-2">Future Goals & Development</h3>
-        <div className="border border-stone-200 rounded p-4 space-y-2 bg-stone-50">
-          <input
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            placeholder="Employee goal"
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm"
-          />
-          <textarea
-            value={support}
-            onChange={(e) => setSupport(e.target.value)}
-            placeholder="How you're helping them reach it"
-            rows={3}
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm"
-          />
-          <button
-            onClick={async () => {
-              if (!goal.trim()) return;
-              await onAddGoal(employee, goal.trim(), support.trim());
-              setGoal("");
-              setSupport("");
-            }}
-            className="bg-black text-white px-4 py-2 rounded hover:bg-stone-800 text-sm"
-          >
-            Save Goal
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {employee.goals.length === 0 ? (
-            <p className="text-stone-500 text-sm">No goals recorded yet.</p>
-          ) : (
-            [...employee.goals]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((g) => (
-                <div key={g.id} className="border border-stone-200 rounded p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="font-semibold">{g.goal}</div>
-                    <div className="text-xs text-stone-500">
-                      {g.date} · {g.manager}
+                    <div className="font-medium">{employee.name}</div>
+                    <div className="text-sm text-stone-500">
+                      {employee.title} · {storeName(employee.storeId)}
                     </div>
                   </div>
-                  {g.support && (
-                    <div className="text-sm text-stone-700 mt-1">
-                      <span className="text-stone-500">Support plan:</span> {g.support}
+
+                  <div className="text-right text-xs">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteEmployee(Number(employee.id), employee.name);
+                      }}
+                      className="text-red-600 text-xs hover:underline mb-1"
+                    >
+                      Delete
+                    </button>
+
+                    <div
+                      className={
+                        employee.nextReviewDue && isOverdue(employee.nextReviewDue)
+                          ? "text-red-600 font-semibold"
+                          : "text-stone-500"
+                      }
+                    >
+                      Next review: {employee.nextReviewDue || "—"}
                     </div>
-                  )}
-                </div>
-              ))
-          )}
-        </div>
-      </section>
 
-      <section>
-        <h3 className="font-semibold text-lg mb-2">Manager Notes</h3>
-        <div className="border border-stone-200 rounded p-4 space-y-2 bg-stone-50">
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Add a note about this employee..."
-            rows={3}
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm"
-          />
-          <button
-            onClick={async () => {
-              if (!note.trim()) return;
-              await onAddNote(employee, note.trim());
-              setNote("");
-            }}
-            className="bg-black text-white px-4 py-2 rounded hover:bg-stone-800 text-sm"
-          >
-            Add Note
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {employee.notes.length === 0 ? (
-            <p className="text-stone-500 text-sm">No notes recorded yet.</p>
-          ) : (
-            [...employee.notes]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((n) => (
-                <div key={n.id} className="border-l-4 border-stone-300 bg-white border border-stone-200 rounded p-3">
-                  <div className="text-xs text-stone-500 mb-1">
-                    {n.date} · {n.manager || user.name}
-                  </div>
-                  <div className="text-sm text-stone-800">{n.text}</div>
-                </div>
-              ))
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function DocumentsTab({
-  employee,
-  user,
-  onAddDocument,
-}: {
-  employee: Employee;
-  user: User;
-  onAddDocument: (employee: Employee, label: string, file: File) => Promise<void>;
-}) {
-  const [label, setLabel] = useState("");
-
-  const docs = [...employee.documents].sort((a, b) => b.date.localeCompare(a.date));
-
-  return (
-    <div className="space-y-6">
-      <section>
-        <h3 className="font-semibold text-lg mb-2">Upload Documents & Photos</h3>
-        <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 bg-stone-50">
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Optional label"
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm mb-3 bg-white"
-          />
-
-          <label className="flex items-center justify-center gap-2 cursor-pointer bg-black text-white px-4 py-3 rounded hover:bg-stone-800 text-sm font-medium">
-            <Paperclip size={16} />
-            Choose file or photo
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                await onAddDocument(employee, label.trim() || file.name, file);
-                setLabel("");
-                e.currentTarget.value = "";
-              }}
-              className="hidden"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="font-semibold text-lg mb-3">Files on Record ({docs.length})</h3>
-        {docs.length === 0 ? (
-          <p className="text-stone-500 text-sm">No documents uploaded yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {docs.map((d) => (
-              <a
-                key={d.id}
-                href={d.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="border border-stone-200 rounded overflow-hidden bg-white hover:bg-stone-50"
-              >
-                {d.fileType.startsWith("image/") ? (
-                  <img src={d.fileUrl} alt={d.label} className="w-full aspect-square object-cover" />
-                ) : (
-                  <div className="w-full aspect-square flex items-center justify-center text-stone-500">
-                    <FileText size={30} />
-                  </div>
-                )}
-                <div className="p-2">
-                  <div className="text-xs font-medium truncate">{d.label}</div>
-                  <div className="text-xs text-stone-500">
-                    {d.date} · {d.uploadedBy || user.name}
+                    <div className="text-stone-400 mt-1">
+                      Check-ins: {employee.checkins.length}
+                    </div>
                   </div>
                 </div>
-              </a>
+              </div>
             ))}
+
+            {visibleEmployees.length === 0 && (
+              <div className="py-6 text-sm text-stone-500">No employees found.</div>
+            )}
           </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function AttendanceTab({
-  employee,
-  onAddAttendance,
-}: {
-  employee: Employee;
-  onAddAttendance: (
-    employee: Employee,
-    incidentDate: string,
-    incidentType: string,
-    reason: string,
-    writeUp: boolean
-  ) => Promise<void>;
-}) {
-  const [form, setForm] = useState({
-    date: "",
-    type: "Late",
-    reason: "",
-    writeUp: false,
-  });
-
-  return (
-    <div className="space-y-4">
-      <div className="border border-stone-200 rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-2">
-        <input
-          type="date"
-          value={form.date}
-          onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
-          className="border border-stone-300 rounded px-2 py-1.5 text-sm"
-        />
-        <select
-          value={form.type}
-          onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-          className="border border-stone-300 rounded px-2 py-1.5 text-sm"
-        >
-          <option>Late</option>
-          <option>Left Early</option>
-          <option>Call Off</option>
-          <option>Bad Behavior</option>
-        </select>
-        <input
-          placeholder="Reason"
-          value={form.reason}
-          onChange={(e) => setForm((prev) => ({ ...prev, reason: e.target.value }))}
-          className="border border-stone-300 rounded px-2 py-1.5 text-sm"
-        />
-        <button
-          onClick={async () => {
-            if (!form.date || !form.reason.trim()) return;
-            await onAddAttendance(employee, form.date, form.type, form.reason.trim(), form.writeUp);
-            setForm({ date: "", type: "Late", reason: "", writeUp: false });
-          }}
-          className="bg-black text-white rounded px-3 py-1.5 text-sm hover:bg-stone-800"
-        >
-          Log Incident
-        </button>
-      </div>
-
-      {employee.attendance.length === 0 ? (
-        <p className="text-stone-500 text-sm">No incidents on file.</p>
-      ) : (
-        <table className="w-full text-sm border border-stone-200">
-          <thead className="bg-stone-100">
-            <tr>
-              <th className="text-left p-2">Date</th>
-              <th className="text-left p-2">Type</th>
-              <th className="text-left p-2">Reason</th>
-              <th className="text-left p-2">Write-Up</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...employee.attendance]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((a) => (
-                <tr key={a.id} className="border-t border-stone-200">
-                  <td className="p-2">{a.date}</td>
-                  <td className="p-2">{a.type}</td>
-                  <td className="p-2">{a.reason}</td>
-                  <td className="p-2">{a.writeUp ? "Yes" : "No"}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-function TerminationTab({
-  employee,
-  onTerminate,
-  onDeleteEmployee,
-}: {
-  employee: Employee;
-  onTerminate: (employee: Employee, reason: string) => Promise<void>;
-  onDeleteEmployee: (employee: Employee) => Promise<void>;
-}) {
-  const [reason, setReason] = useState("");
-
-  return (
-    <div className="space-y-4 max-w-2xl">
-      <textarea
-        placeholder="Termination reason"
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        rows={4}
-        className="w-full border border-stone-300 rounded px-3 py-2 text-sm"
-      />
-
-      <div className="flex flex-wrap gap-3">
-        <button
-          disabled={!reason.trim()}
-          onClick={async () => {
-            if (!reason.trim()) return;
-            await onTerminate(employee, reason.trim());
-          }}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-stone-300"
-        >
-          Submit Termination
-        </button>
-
-        <button
-          onClick={() => onDeleteEmployee(employee)}
-          className="bg-stone-200 text-stone-900 px-4 py-2 rounded hover:bg-stone-300 flex items-center gap-2"
-        >
-          <Trash2 size={16} />
-          Delete Employee
-        </button>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
@@ -2018,116 +2149,71 @@ function KpiCard({
   value,
   danger = false,
 }: {
- icon: React.ReactNode;
+  icon: React.ReactNode;
   label: string;
   value: number;
   danger?: boolean;
 }) {
   return (
-    <div className={`bg-white border rounded-lg p-4 ${danger ? "border-red-300" : "border-stone-200"}`}>
+    <div
+      className={`bg-white border rounded-xl p-4 shadow-sm ${
+        danger ? "border-red-300" : "border-stone-200"
+      }`}
+    >
       <div className={`flex items-center gap-2 text-sm ${danger ? "text-red-600" : "text-stone-600"}`}>
         {icon}
         {label}
       </div>
-      <div className={`text-3xl font-bold mt-1 ${danger ? "text-red-600" : ""}`}>{value}</div>
+      <div className={`text-3xl font-bold mt-2 ${danger ? "text-red-600" : ""}`}>{value}</div>
     </div>
   );
 }
 
-function MetricRow({
-  label,
-  values,
-  redIf,
-}: {
-  label: string;
-  values: Array<number | string>;
-  redIf?: (value: number) => boolean;
-}) {
+function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <tr className="border-b border-stone-100">
-      <td className="p-3 text-stone-600">{label}</td>
-      {values.map((v, i) => {
-        const isRed = redIf && typeof v === "number" && redIf(v);
-        return (
-          <td key={i} className={`p-3 font-semibold ${isRed ? "text-red-600" : ""}`}>
-            {v}
-          </td>
-        );
-      })}
-    </tr>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-stone-200 rounded p-3">
-      <div className="text-xs text-stone-500 uppercase tracking-wide">{label}</div>
-      <div className="font-medium mt-1">{value}</div>
+    <div className="border border-stone-200 rounded-lg p-4">
+      <div className="text-xs uppercase tracking-wide text-stone-500 mb-1">{label}</div>
+      <div className="font-medium">{value}</div>
     </div>
   );
 }
 
-function EditableField({
+function ToggleCard({
   label,
   value,
-  onSave,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => Promise<void>;
-}) {
-  const [draft, setDraft] = useState(value);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  return (
-    <div className="border border-stone-200 rounded p-3">
-      <div className="text-xs text-stone-500 uppercase tracking-wide mb-1">{label}</div>
-      <div className="flex gap-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          className="flex-1 border border-stone-300 rounded px-2 py-1.5 text-sm"
-        />
-        <button
-          onClick={() => onSave(draft)}
-          className="bg-black text-white px-3 py-1.5 rounded text-sm hover:bg-stone-800"
-        >
-          Save
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ToggleField({
-  label,
-  value,
-  onChange,
+  onToggle,
 }: {
   label: string;
   value: boolean;
-  onChange: (value: boolean) => Promise<void>;
+  onToggle: () => void;
 }) {
   return (
-    <div className="border border-stone-200 rounded p-3 flex items-center justify-between">
-      <div className="text-sm font-medium">{label}</div>
-      <div className="flex gap-1">
-        <button
-          onClick={() => onChange(true)}
-          className={`px-3 py-1 rounded text-sm ${value ? "bg-green-600 text-white" : "bg-stone-100"}`}
-        >
-          Yes
-        </button>
-        <button
-          onClick={() => onChange(false)}
-          className={`px-3 py-1 rounded text-sm ${!value ? "bg-stone-700 text-white" : "bg-stone-100"}`}
-        >
-          No
-        </button>
+    <button
+      onClick={onToggle}
+      className="border border-stone-200 rounded-lg p-4 text-left hover:bg-stone-50"
+    >
+      <div className="text-xs uppercase tracking-wide text-stone-500 mb-1">{label}</div>
+      <div className={value ? "font-medium text-green-700" : "font-medium text-stone-500"}>
+        {value ? "Yes" : "No"}
       </div>
+    </button>
+  );
+}
+
+function MiniRating({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-stone-200 rounded-lg p-3">
+      <div className="text-xs uppercase tracking-wide text-stone-500 mb-1">{label}</div>
+      <div className="font-semibold">{value || "—"}</div>
+    </div>
+  );
+}
+
+function MiniScore({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="border border-stone-200 rounded-lg p-3">
+      <div className="text-xs uppercase tracking-wide text-stone-500 mb-1">{label}</div>
+      <div className="font-semibold">{value} / 4</div>
     </div>
   );
 }
