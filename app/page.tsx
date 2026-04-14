@@ -1358,12 +1358,35 @@ export default function Page() {
             />
 
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
-            />
+  type="password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  placeholder="Password"
+  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+/>
+
+<button
+  onClick={async () => {
+    if (!email) {
+      alert("Enter your email first");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "http://localhost:3000/reset-password",
+    });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Password reset email sent!");
+    }
+  }}
+  className="text-xs text-blue-600 hover:underline text-left mb-3"
+>
+  Forgot password?
+</button>
+
 
             {authError ? (
               <div className="text-sm text-red-600">{authError}</div>
