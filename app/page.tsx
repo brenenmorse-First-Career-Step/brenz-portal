@@ -2,6 +2,7 @@
 
 import { supabase } from "./lib/supabase";
 import { useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   Users,
   AlertTriangle,
@@ -21,7 +22,6 @@ import {
   EyeOff,
   Pencil,
   Trash2,
-  Target,
 } from "lucide-react";
 
 type Role = "owner" | "gm";
@@ -31,6 +31,13 @@ type User = {
   name: string;
   role: Role;
   storeId: string | null;
+};
+
+type UserProfile = {
+  id: string;
+  name: string | null;
+  role: "owner" | "manager";
+  store_id: number | null;
 };
 
 type StoreType = {
@@ -292,8 +299,16 @@ function normalizeCheckinRating(value: string | null | undefined): CheckinRating
 }
 
 export default function Page() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
+
   const [stores, setStores] = useState<StoreType[]>([]);
-  const [currentUserId, setCurrentUserId] = useState("owner");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [managers, setManagers] = useState<ManagerRow[]>([]);
   const [employeeNotes, setEmployeeNotes] = useState<EmployeeNoteRow[]>([]);
@@ -347,8 +362,90 @@ export default function Page() {
     "Safety": 0,
   });
 
+  async function fetchUserProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("id, name, role, store_id")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("USER PROFILE ERROR:", JSON.stringify(error, null, 2));
+      setUserProfile(null);
+      return;
+    }
+
+    setUserProfile(data as UserProfile);
+  }
+
+  async function signInWithEmail() {
+    setSigningIn(true);
+    setAuthError("");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message || "Could not sign in.");
+    }
+
+    setSigningIn(false);
+  }
+
+  async function signOutUser() {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUserProfile(null);
+    setSelectedEmployeeId(null);
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function bootstrapAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setSession(session);
+
+      if (session?.user?.id) {
+        await fetchUserProfile(session.user.id);
+      }
+
+      setAuthLoading(false);
+    }
+
+    bootstrapAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+
+      if (newSession?.user?.id) {
+        await fetchUserProfile(newSession.user.id);
+      } else {
+        setUserProfile(null);
+      }
+
+      setAuthLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     async function load() {
+      if (!session || !userProfile) return;
+
       setLoading(true);
       await Promise.all([
         fetchStores(),
@@ -364,12 +461,13 @@ export default function Page() {
       await fetchEmployees();
       setLoading(false);
     }
+
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session, userProfile]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && session && userProfile) {
       fetchEmployees();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -535,15 +633,15 @@ export default function Page() {
           manager: note.manager_name ?? "",
         })),
 
-goals: employeeGoals
-  .filter((goal) => String(goal.employee_id) === String(row.id))
-  .map((goal) => ({
-    id: String(goal.id),
-    date: goal.goal_date,
-    goal: goal.goal ?? goal.goal_text ?? "",
-    support: goal.support ?? goal.support_text ?? "",
-    manager: goal.manager_name ?? "",
-  })),
+      goals: employeeGoals
+        .filter((goal) => String(goal.employee_id) === String(row.id))
+        .map((goal) => ({
+          id: String(goal.id),
+          date: goal.goal_date,
+          goal: goal.goal ?? goal.goal_text ?? "",
+          support: goal.support ?? goal.support_text ?? "",
+          manager: goal.manager_name ?? "",
+        })),
 
       checkins: employeeCheckins
         .filter((checkin) => String(checkin.employee_id) === String(row.id))
@@ -611,34 +709,14 @@ goals: employeeGoals
     setEmployees(mapped);
   }
 
-  const dynamicUsers: User[] = useMemo(() => {
-    const owner: User = {
-      id: "owner",
-      name: "Owner (You)",
-      role: "owner",
-      storeId: null,
-    };
-
-    const gmUsers: User[] = managers
-      .filter((manager) => manager.role !== "owner")
-      .map((manager) => ({
-        id: `gm-${manager.id}`,
-        name: manager.name,
-        role: "gm" as Role,
-        storeId: toStoreKey(manager.store_id),
-      }));
-
-    return [owner, ...gmUsers];
-  }, [managers]);
-
-  const currentUser =
-    dynamicUsers.find((u) => u.id === currentUserId) ??
-    dynamicUsers[0] ?? {
-      id: "owner",
-      name: "Owner (You)",
-      role: "owner" as Role,
-      storeId: null,
-    };
+  const currentUser: User | null = userProfile
+    ? {
+        id: userProfile.id,
+        name: userProfile.name || "User",
+        role: userProfile.role === "owner" ? "owner" : "gm",
+        storeId: userProfile.store_id ? toStoreKey(userProfile.store_id) : null,
+      }
+    : null;
 
   function storeName(storeId: string) {
     return stores.find((s) => s.id === storeId)?.name ?? "Unknown store";
@@ -652,6 +730,7 @@ goals: employeeGoals
   }
 
   const visibleEmployees = useMemo(() => {
+    if (!currentUser) return [];
     if (currentUser.role === "owner") return employees.filter((e) => !e.terminated);
     return employees.filter((e) => !e.terminated && e.storeId === currentUser.storeId);
   }, [employees, currentUser]);
@@ -686,6 +765,8 @@ goals: employeeGoals
   });
 
   function logAudit(action: string, target: string) {
+    if (!currentUser) return;
+
     setAudit((prev) => [
       {
         id: Date.now(),
@@ -703,7 +784,7 @@ goals: employeeGoals
   }
 
   async function addStore() {
-    if (currentUser.role !== "owner") return;
+    if (!currentUser || currentUser.role !== "owner") return;
 
     const storeNameInput = prompt("Store name?");
     if (!storeNameInput?.trim()) return;
@@ -732,7 +813,7 @@ goals: employeeGoals
   }
 
   async function addManager() {
-    if (currentUser.role !== "owner") return;
+    if (!currentUser || currentUser.role !== "owner") return;
 
     if (stores.length === 0) {
       alert("No stores found.");
@@ -780,7 +861,7 @@ goals: employeeGoals
   }
 
   async function editManager(manager: ManagerRow) {
-    if (currentUser.role !== "owner") return;
+    if (!currentUser || currentUser.role !== "owner") return;
 
     const newName = prompt("Edit manager name:", manager.name);
     if (!newName?.trim()) return;
@@ -821,7 +902,7 @@ goals: employeeGoals
   }
 
   async function deleteManager(manager: ManagerRow) {
-    if (currentUser.role !== "owner") return;
+    if (!currentUser || currentUser.role !== "owner") return;
 
     const confirmed = window.confirm(`Delete manager ${manager.name}?`);
     if (!confirmed) return;
@@ -839,7 +920,7 @@ goals: employeeGoals
   }
 
   async function changeManagerStore() {
-    if (currentUser.role !== "owner") return;
+    if (!currentUser || currentUser.role !== "owner") return;
 
     const managerOnly = managers.filter((m) => m.role === "manager");
 
@@ -907,6 +988,8 @@ goals: employeeGoals
   }
 
   async function addEmployee() {
+    if (!currentUser) return;
+
     if (stores.length === 0) {
       alert("No stores found.");
       return;
@@ -977,7 +1060,7 @@ goals: employeeGoals
   }
 
   async function addNote() {
-    if (!selectedEmployee || !newNote.trim()) return;
+    if (!selectedEmployee || !newNote.trim() || !currentUser) return;
 
     const { error } = await supabase.from("employee_notes").insert([
       {
@@ -998,34 +1081,34 @@ goals: employeeGoals
     await fetchEmployeeNotes();
   }
 
-async function addGoal() {
-  if (!selectedEmployee || !newGoal.trim()) return;
+  async function addGoal() {
+    if (!selectedEmployee || !newGoal.trim() || !currentUser) return;
 
-  const payload = {
-    employee_id: Number(selectedEmployee.id),
-    goal: newGoal.trim(),
-    goal_text: newGoal.trim(),
-    support: newGoalSupport.trim(),
-    support_text: newGoalSupport.trim(),
-    manager_name: currentUser.name,
-  };
+    const payload = {
+      employee_id: Number(selectedEmployee.id),
+      goal: newGoal.trim(),
+      goal_text: newGoal.trim(),
+      support: newGoalSupport.trim(),
+      support_text: newGoalSupport.trim(),
+      manager_name: currentUser.name,
+    };
 
-  const { error } = await supabase.from("employee_goals").insert([payload]);
+    const { error } = await supabase.from("employee_goals").insert([payload]);
 
-  if (error) {
-    console.error("ADD GOAL ERROR:", JSON.stringify(error, null, 2));
-    alert(error.message || "Could not save goal.");
-    return;
+    if (error) {
+      console.error("ADD GOAL ERROR:", JSON.stringify(error, null, 2));
+      alert(error.message || "Could not save goal.");
+      return;
+    }
+
+    logAudit("Added goal", selectedEmployee.name);
+    setNewGoal("");
+    setNewGoalSupport("");
+    await fetchEmployeeGoals();
   }
 
-  logAudit("Added goal", selectedEmployee.name);
-  setNewGoal("");
-  setNewGoalSupport("");
-  await fetchEmployeeGoals();
-}
-
   async function addCheckin() {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || !currentUser) return;
 
     const hasAtLeastOneRating = Object.values(checkinRatings).some((value) => value !== "");
 
@@ -1060,7 +1143,7 @@ async function addGoal() {
   }
 
   async function addAttendance() {
-    if (!selectedEmployee || !attendanceReason.trim() || !attendanceDate) return;
+    if (!selectedEmployee || !attendanceReason.trim() || !attendanceDate || !currentUser) return;
 
     const { error } = await supabase.from("employee_attendance").insert([
       {
@@ -1085,7 +1168,7 @@ async function addGoal() {
   }
 
   async function uploadDocument(file: File | null) {
-    if (!selectedEmployee || !file) return;
+    if (!selectedEmployee || !file || !currentUser) return;
 
     setUploadingDocument(true);
 
@@ -1134,7 +1217,9 @@ async function addGoal() {
   }
 
   async function addPayEntry() {
-    if (!selectedEmployee || !newPayTitle.trim() || !newPayRate.trim() || !newPayDate) return;
+    if (!selectedEmployee || !newPayTitle.trim() || !newPayRate.trim() || !newPayDate || !currentUser) {
+      return;
+    }
 
     const { error } = await supabase.from("employee_pay").insert([
       {
@@ -1162,7 +1247,7 @@ async function addGoal() {
   }
 
   async function submitReview() {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || !currentUser) return;
 
     const total = Object.values(reviewScores).reduce((sum, v) => sum + v, 0);
     const today = new Date().toISOString().slice(0, 10);
@@ -1246,7 +1331,78 @@ async function addGoal() {
     await fetchEmployees();
   }
 
-  if (loading) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center">
+        <div className="text-lg font-medium">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white border border-stone-200 rounded-2xl shadow-sm p-6">
+          <div className="text-2xl font-black tracking-tight mb-1">
+            BRENZ<span className="text-red-500">.</span>
+          </div>
+          <div className="text-sm text-stone-500 mb-6">Employee Portal Login</div>
+
+          <div className="space-y-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+            />
+
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
+            />
+
+            {authError ? (
+              <div className="text-sm text-red-600">{authError}</div>
+            ) : null}
+
+            <button
+              onClick={signInWithEmail}
+              disabled={signingIn}
+              className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800 disabled:opacity-60"
+            >
+              {signingIn ? "Signing in..." : "Sign In"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
+        <div className="w-full max-w-lg bg-white border border-red-200 rounded-2xl shadow-sm p-6">
+          <div className="text-xl font-semibold text-red-700 mb-2">No user profile found</div>
+          <div className="text-sm text-stone-600 mb-4">
+            This login exists in Supabase Auth, but it is not connected to a row in the
+            <code className="mx-1">user_profiles</code> table.
+          </div>
+          <button
+            onClick={signOutUser}
+            className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !currentUser) {
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center">
         <div className="text-lg font-medium">Loading...</div>
@@ -1272,7 +1428,15 @@ async function addGoal() {
           <div className="text-2xl font-black tracking-tight">
             BRENZ<span className="text-red-500">.</span>
           </div>
-          <div className="text-sm text-stone-300">Employee Portal</div>
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-stone-300">{currentUser.name}</div>
+            <button
+              onClick={signOutUser}
+              className="bg-stone-800 text-white text-sm px-3 py-2 rounded border border-stone-700 hover:bg-stone-700"
+            >
+              Sign Out
+            </button>
+          </div>
         </header>
 
         <main className="max-w-6xl mx-auto p-6">
@@ -1848,21 +2012,18 @@ async function addGoal() {
         </div>
 
         <div className="flex items-center gap-3">
-          <select
-            value={currentUserId}
-            onChange={(e) => setCurrentUserId(e.target.value)}
-            className="bg-stone-800 text-white text-sm px-3 py-2 rounded border border-stone-700"
-          >
-            {dynamicUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+          <div className="text-sm text-stone-200">{currentUser.name}</div>
 
           <div className="text-xs uppercase tracking-wide bg-stone-800 px-2 py-1 rounded">
             {currentUser.role}
           </div>
+
+          <button
+            onClick={signOutUser}
+            className="bg-stone-800 text-white text-sm px-3 py-2 rounded border border-stone-700 hover:bg-stone-700"
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
