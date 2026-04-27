@@ -2,7 +2,6 @@
 
 import { supabase } from "./lib/supabase";
 import { useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import {
   Users,
   AlertTriangle,
@@ -299,12 +298,10 @@ function normalizeCheckinRating(value: string | null | undefined): CheckinRating
 }
 
 export default function Page() {
-  const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [signingIn, setSigningIn] = useState(false);
 
@@ -382,69 +379,86 @@ export default function Page() {
     setSigningIn(true);
     setAuthError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const cleanEmail = email.trim().toLowerCase();
 
-    if (error) {
-      setAuthError(error.message || "Could not sign in.");
+      if (!cleanEmail) {
+        setAuthError("Enter your email first.");
+        return;
+      }
+
+      // Owner shortcut - no password needed
+      if (cleanEmail === "owner@brenz.com") {
+        const ownerProfile: UserProfile = {
+          id: "owner",
+          name: "Owner",
+          role: "owner",
+          store_id: null,
+        };
+
+        setUserProfile(ownerProfile);
+        localStorage.setItem("brenz_user_profile", JSON.stringify(ownerProfile));
+        return;
+      }
+
+      // Manager login by email - no password needed
+      const { data: manager, error } = await supabase
+        .from("managers")
+        .select("*")
+        .ilike("email", cleanEmail)
+        .maybeSingle();
+
+      if (error) {
+        console.error("EMAIL LOGIN ERROR:", JSON.stringify(error, null, 2));
+        setAuthError(error.message || "Something went wrong checking that email.");
+        return;
+      }
+
+      if (!manager) {
+        setAuthError("No manager found with that email.");
+        return;
+      }
+
+      const managerProfile: UserProfile = {
+        id: String(manager.id),
+        name: manager.name || cleanEmail,
+        role: "manager",
+        store_id: manager.store_id ? Number(manager.store_id) : null,
+      };
+
+      setUserProfile(managerProfile);
+      localStorage.setItem("brenz_user_profile", JSON.stringify(managerProfile));
+    } finally {
+      setSigningIn(false);
     }
-
-    setSigningIn(false);
   }
 
   async function signOutUser() {
-    await supabase.auth.signOut();
-    setSession(null);
+    localStorage.removeItem("brenz_user_profile");
     setUserProfile(null);
     setSelectedEmployeeId(null);
+    setLoading(false);
+    setEmail("");
+    setAuthError("");
   }
 
   useEffect(() => {
-    let mounted = true;
+    const savedProfile = localStorage.getItem("brenz_user_profile");
 
-    async function bootstrapAuth() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setSession(session);
-
-      if (session?.user?.id) {
-        await fetchUserProfile(session.user.id);
+    if (savedProfile) {
+      try {
+        setUserProfile(JSON.parse(savedProfile) as UserProfile);
+      } catch {
+        localStorage.removeItem("brenz_user_profile");
       }
-
-      setAuthLoading(false);
     }
 
-    bootstrapAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-
-      if (newSession?.user?.id) {
-        await fetchUserProfile(newSession.user.id);
-      } else {
-        setUserProfile(null);
-      }
-
-      setAuthLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    setAuthLoading(false);
   }, []);
 
   useEffect(() => {
     async function load() {
-      if (!session || !userProfile) return;
+      if (!userProfile) return;
 
       setLoading(true);
       await Promise.all([
@@ -464,10 +478,10 @@ export default function Page() {
 
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, userProfile]);
+  }, [userProfile]);
 
   useEffect(() => {
-    if (!loading && session && userProfile) {
+    if (!loading && userProfile) {
       fetchEmployees();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1339,7 +1353,7 @@ export default function Page() {
     );
   }
 
-  if (!session) {
+  if (!userProfile) {
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white border border-stone-200 rounded-2xl shadow-sm p-6">
@@ -1357,35 +1371,9 @@ export default function Page() {
               className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
             />
 
-            <input
-  type="password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  placeholder="Password"
-  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
-/>
 
-<button
-  onClick={async () => {
-    if (!email) {
-      alert("Enter your email first");
-      return;
-    }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/reset-password",
-    });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Password reset email sent!");
-    }
-  }}
-  className="text-xs text-blue-600 hover:underline text-left mb-3"
->
-  Forgot password?
-</button>
 
 
             {authError ? (
@@ -1400,26 +1388,6 @@ export default function Page() {
               {signingIn ? "Signing in..." : "Sign In"}
             </button>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
-        <div className="w-full max-w-lg bg-white border border-red-200 rounded-2xl shadow-sm p-6">
-          <div className="text-xl font-semibold text-red-700 mb-2">No user profile found</div>
-          <div className="text-sm text-stone-600 mb-4">
-            This login exists in Supabase Auth, but it is not connected to a row in the
-            <code className="mx-1">user_profiles</code> table.
-          </div>
-          <button
-            onClick={signOutUser}
-            className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-800"
-          >
-            Sign Out
-          </button>
         </div>
       </div>
     );
